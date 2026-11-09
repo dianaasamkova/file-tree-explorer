@@ -10,7 +10,7 @@ A searchable file-and-folder tree in React: nested folders, multi-select, and a 
 
 ## Highlights
 
-- **Search that keeps context.** Files match by name, and their parent folders stay visible, so the user always sees *where* a match lives. A folder that matches by name keeps all of its contents.
+- **Search that keeps context.** Files match by name, and their parent folders stay visible, so the user always sees _where_ a match lives. A folder that matches by name keeps all of its contents.
 - **Auto-expand on search.** Results open automatically, so matches are never hidden inside collapsed folders.
 - **Debounced input.** The input updates on every keystroke, but the tree filters only after the user stops typing.
 - **Pure, tested logic.** Search and id-collection are plain recursive functions, separate from the UI and covered by unit tests.

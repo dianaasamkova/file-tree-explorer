@@ -42,7 +42,7 @@ export function denormalizeTree(tree: Tree): ApiTreeResponse {
     if (node.type === 'folder') {
       return { id: node.id, name: node.name, type: 'folder', children: node.childIds.map(toApi) }
     }
-    const { parentId: _parentId, ...file } = node
+    const { parentId, ...file } = node
     return file
   }
   return { items: tree.rootIds.map(toApi) }

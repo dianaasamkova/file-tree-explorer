@@ -63,7 +63,11 @@ export interface VisibleRow {
  * Flattens the tree into the rows currently on screen, in display order. A flat list lets the
  * tree be virtualized: only the rows in the viewport are rendered.
  */
-export function getVisibleRows(tree: Tree, expandedIds: ReadonlySet<NodeId>, filter?: ReadonlySet<NodeId>): VisibleRow[] {
+export function getVisibleRows(
+  tree: Tree,
+  expandedIds: ReadonlySet<NodeId>,
+  filter?: ReadonlySet<NodeId>,
+): VisibleRow[] {
   const rows: VisibleRow[] = []
 
   function walk(ids: NodeId[], level: number) {

@@ -30,15 +30,15 @@ flowchart LR
 
 ## 3. Key decisions
 
-| Decision | Why | Trade-off |
-|---|---|---|
-| MUI X `SimpleTreeView` | Keyboard navigation, ARIA tree roles and multi-select out of the box | Renders every node; there's no built-in virtualisation |
-| Filter on the client | The dataset is small and comes in one response | Doesn't scale to large drives (see Roadmap) |
-| Keep ancestors of matches | A file name alone is ambiguous; the path gives context | The visible tree can still be large for common queries |
-| Matching folder keeps all its content | The user searched for the folder, so they want what's inside | Its children aren't narrowed further |
-| Two states: `inputValue` and `search` | The input stays responsive; only the expensive filter is debounced | Two sources of truth to keep in sync |
-| Expand everything while searching | Matches are never hidden in a collapsed branch | It also expands non-matching branches of matching folders |
-| `memo` on the filtered tree | Avoids re-filtering on selection or expansion changes | — |
+| Decision                              | Why                                                                  | Trade-off                                                 |
+| ------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------- |
+| MUI X `SimpleTreeView`                | Keyboard navigation, ARIA tree roles and multi-select out of the box | Renders every node; there's no built-in virtualisation    |
+| Filter on the client                  | The dataset is small and comes in one response                       | Doesn't scale to large drives (see Roadmap)               |
+| Keep ancestors of matches             | A file name alone is ambiguous; the path gives context               | The visible tree can still be large for common queries    |
+| Matching folder keeps all its content | The user searched for the folder, so they want what's inside         | Its children aren't narrowed further                      |
+| Two states: `inputValue` and `search` | The input stays responsive; only the expensive filter is debounced   | Two sources of truth to keep in sync                      |
+| Expand everything while searching     | Matches are never hidden in a collapsed branch                       | It also expands non-matching branches of matching folders |
+| `memo` on the filtered tree           | Avoids re-filtering on selection or expansion changes                | —                                                         |
 
 ### Data model
 

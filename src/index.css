@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/geist';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Semantic tokens. Light and dark are designed as a pair: same roles, contrast ≥ 4.5:1 for text
+ * and ≥ 3:1 for icons and focus rings in both. Components only use the role names below.
+ */
+:root {
+  --background: #f6f7f9;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --foreground: #152033;
+  --muted: #5a6577;
+  --border: #dfe3ea;
+  --hover: #eef1f5;
+  --accent: #2f5bea;
+  --accent-foreground: #ffffff;
+  --accent-soft: #e7edfd;
+  --folder: #b7791f;
+  --mark: #fde68a;
+  --mark-foreground: #152033;
+  --danger: #c2362f;
+  --danger-soft: #fdecea;
+  --guide: #d5dae2;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0f1520;
+  --surface: #141b27;
+  --surface-raised: #1a2230;
+  --foreground: #e6eaf2;
+  --muted: #9aa5b6;
+  --border: #263042;
+  --hover: #1c2534;
+  --accent: #7c9cff;
+  --accent-foreground: #0f1520;
+  --accent-soft: #1d2947;
+  --folder: #e0a84a;
+  --mark: #6b5414;
+  --mark-foreground: #fff3c4;
+  --danger: #f07167;
+  --danger-soft: #3a1d1f;
+  --guide: #2a3446;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-hover: var(--hover);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-folder: var(--folder);
+  --color-mark: var(--mark);
+  --color-mark-foreground: var(--mark-foreground);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-guide: var(--guide);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  :focus-visible {
+    @apply outline-accent outline-2 outline-offset-2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

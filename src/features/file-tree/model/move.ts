@@ -13,6 +13,13 @@ export const moveErrorMessages: Record<MoveError, string> = {
   'name-conflict': 'The destination already has an item with this name.',
 }
 
+/** Where an item lands when dropped or pasted onto `id`: the folder itself, or a file's folder. */
+export function getDropTarget(tree: Tree, id: NodeId): FolderTarget {
+  const node = tree.nodes[id]
+  if (!node) return null
+  return node.type === 'folder' ? node.id : node.parentId
+}
+
 /** Business rules for moving `id` into `target` (a folder id, or `null` for the root). */
 export function canMove(tree: Tree, id: NodeId, target: FolderTarget): MoveCheck {
   const node = tree.nodes[id]

@@ -1,6 +1,7 @@
 import type { TreeNode } from './types'
 
-export type FileKind = 'folder' | 'image' | 'video' | 'audio' | 'pdf' | 'spreadsheet' | 'document' | 'code' | 'archive' | 'other'
+export type FileKind =
+  'folder' | 'image' | 'video' | 'audio' | 'pdf' | 'spreadsheet' | 'document' | 'code' | 'archive' | 'other'
 
 const kindLabels: Record<FileKind, string> = {
   folder: 'Folder',
