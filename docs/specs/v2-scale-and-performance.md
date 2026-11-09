@@ -1,4 +1,4 @@
-# Spec: File Tree Explorer v2 — scale, performance and product depth
+# Spec: File Tree Explorer v2 — scale, performance, quality and platform
 
 |           |                                                    |
 | --------- | -------------------------------------------------- |
@@ -11,7 +11,13 @@
 
 v1 shows a polished, accessible tree, but at 10,000 items it never has to work hard: on a fast laptop it produces no long tasks at all. A file manager's real problems start when the drive is too big to send in one response, when search has to run somewhere other than the main thread, and when every interaction has a measured budget.
 
-v2 makes the explorer handle **1,000,000 items** with lazy loading, proves its speed with **budgets checked in CI**, and adds the product features people expect from a drive: a sortable list view, filters, storage insights, bulk actions, and live updates.
+v2 has to make three claims about the engineer behind it, each backed by code a reviewer can open:
+
+1. **Data-heavy UIs, made fast and measured.** The explorer handles **1,000,000 items** with lazy loading, search runs off the main thread, and **budgets checked in CI** prove it stays fast (sections 4, 5).
+2. **Engineering quality beyond coverage.** Decisions are recorded, the model is tested with generated inputs and checked by mutation testing, data from the server is validated, and success is defined in product terms (section 6).
+3. **Frontend platform thinking.** The code is split into a design system, a feature package and apps, and the explorer can be loaded into a host app as an independently deployed module that fails gracefully (section 7).
+
+Product features (section 5) give the work a real context: a sortable list view, filters, storage insights, and clearer drag and drop with cancel and undo.
 
 ## 2. Baseline (measured 2026-11-09)
 
@@ -250,38 +256,137 @@ Drives such as Google Drive and Finder only sort; manual order is what tools lik
 - **Fractional ordering:** an item moved between two others gets an order value between theirs, so a reorder writes one item, not all its siblings. Siblings are renumbered only when the gap gets too small.
 - New users still see sorted folders; Custom is opt-in per folder and kept by the server.
 
-## 6. Plan
+## 6. Engineering quality
 
-| Phase | Content                                                                                                             | Effort   |
-| ----- | ------------------------------------------------------------------------------------------------------------------- | -------- |
-| P0    | Performance panel, CI budgets, fixes 4.2 a–f, virtualized "Move to", corrected TECH.md, clearer drag and drop (F12) | 3–4 days |
-| P1    | Worker server, lazy folders, infinite pages, server search, 1M drive (F1)                                           | 4–6 days |
-| P2    | List view and filters (F2, F3)                                                                                      | 4–5 days |
-| P3    | Storage insights (F4), optional minimap (F5)                                                                        | 2–3 days |
-| P4    | Multi-select and bulk moves (F6)                                                                                    | 2–3 days |
-| P5    | Live updates (F7)                                                                                                   | 2 days   |
-| P6    | Rename, new folder, Trash, preview, persistence (F8–F10)                                                            | 3–4 days |
-| P7    | Cancel and undo everywhere (F11)                                                                                    | 2–3 days |
-| P8    | Custom order (F13), optional                                                                                        | 2–3 days |
+Small additions that show how the code is built and reasoned about, not only what it does.
 
-**Recommended for the portfolio: P0 to P3, plus F12 (clearer drag and drop) inside P0.** They show measured performance work, a large dataset, and data visualization, and fix the main usability issue found in testing. P4 to P8 add product completeness and can follow later.
+### Q1. Architecture decision records — S
 
-Every phase keeps: tests at the agreed coverage level, axe clean in both themes, keyboard parity, and a TECH.md update with numbers.
+`docs/adr/`, one short page per decision: context, options considered, decision, consequences, and the measurement that supports it where there is one.
 
-## 7. Risks
+- 0001 No global store: Query + reducer + URL
+- 0002 An own accessible tree instead of a tree library
+- 0003 `aria-activedescendant` with a virtualized flat list
+- 0004 Deferred search instead of a debounce (and when to debounce)
+- 0005 Optimistic moves with rollback and undo
+- 0006 Bucketed node store for O(1)-ish immutable moves (with the measurements from section 2)
+- 0007 Lazy folders and server-side search for large drives
+- 0008 Monorepo layout and package boundaries
+- 0009 Loading the explorer as a federated module, and failing gracefully
 
-| Risk                                                              | Mitigation                                                                                                                                  |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| A partially loaded tree makes moves, counts and focus much harder | One normalized store; folders carry `childCount`; the row model is the only place that knows about unloaded ranges; heavy unit tests on it. |
-| 1M items in the worker use a lot of memory on phones              | Measure in P1. Fallback: generate each folder's children on demand from a seed (no full copy in memory), and keep a smaller search index.   |
-| Bundle grows with each feature                                    | Lazy-load F4, F5, F9; `size-limit` in CI.                                                                                                   |
-| 100% coverage slows down feature work                             | Decide the threshold before P1 (see questions).                                                                                             |
+TECH.md keeps the summary table and links to each record.
 
-## 8. Open questions
+### Q2. Property-based tests for the tree model — S
 
-1. Which phases do we build? The recommendation is P0 to P3.
-2. 1,000,000 items, or 250,000 to keep phones comfortable?
-3. Keep the 100% coverage threshold, or 95% so tests stay about behavior?
-4. Where does v2 go: the current PR, or a new PR after the rebuild is merged? A separate PR keeps the rebuild reviewable.
-5. Deploy to GitHub Pages now (v1), or after P0?
-6. Custom order (F13): build it, or keep items always sorted, as file managers do?
+With fast-check, generate random trees and random sequences of moves, and check the invariants after every step:
+
+- No item is lost or duplicated; the item count never changes.
+- Every child's `parentId` points to the folder that lists it, and every node is reachable from the root.
+- Children stay sorted: folders first, then names in natural order.
+- `canMove` refuses exactly the moves that would break these rules, and `moveNode` never throws for a move `canMove` allowed.
+- A move followed by its undo gives back an equal tree.
+- Search: every match contains the query, every ancestor of a match is visible, and clearing the query shows the whole tree.
+
+When a property fails, fast-check shrinks the input to the smallest tree that still fails, and that case becomes a regular test.
+
+### Q3. Mutation testing — S
+
+Stryker runs on `model/` and `state/`: it makes small changes to the code (flips a condition, removes a line) and checks that some test fails. The result is a **mutation score**, a stronger signal than line coverage.
+
+- Target: at least 90% on `model/` and `state/`.
+- Runs in a separate weekly CI job and on demand (it is too slow for every push); the score goes in the README.
+
+### Q4. Validating server data at runtime — S
+
+Every response from the API is parsed with zod schemas at the boundary (`api/`), before it reaches the cache.
+
+- TypeScript types come from the schemas, so the two can't drift.
+- Bad data fails in one place with a clear error and the existing error state, instead of a crash deep in the UI.
+- The mock server gets a "corrupt response" switch to demonstrate it, and a test for each schema.
+
+### Q5. Product definition and metrics — S
+
+A "Product" section in TECH.md, written as a product manager would:
+
+- **Who it's for** and the jobs they do: find a file, tidy up a folder, free up space.
+- **What success means**, as measurable outcomes: time to find a file, share of moves that succeed, share undone right away (a sign of a wrong drop), searches that end with no result.
+- **Events** that would measure them, as a typed list (`search_submitted`, `item_moved`, `move_undone`, `move_failed`, …), with a small `track()` function that logs them in development. No external analytics service.
+- **Guardrails:** performance budgets and accessibility checks are part of "done".
+
+## 7. Platform slice
+
+Shows how the code would be organised when several teams build one product.
+
+### B1. Monorepo — M
+
+npm workspaces, with Turborepo for cached builds and tests:
+
+```
+apps/
+  web/            the demo, deployed to GitHub Pages
+  shell/          a host app that loads the explorer as a remote (B3)
+packages/
+  ui/             design system: tokens, primitives, docs page
+  file-tree/      the feature: model, api, state, ui; no app code
+  config/         shared TypeScript, ESLint and Vitest settings
+```
+
+- Package boundaries are enforced: apps may import packages, `ui` imports nothing from features, deep imports into another package's internals fail lint.
+- Each package has its own tests, coverage and bundle budget.
+- Done **before** the feature phases, so later work lands in its final place.
+
+### B2. Design system package — M
+
+- Tokens (colour, type, spacing, radius) as CSS variables with TypeScript names; light and dark defined together.
+- The primitives (Button, Kbd, Skeleton, plus the combobox and menu from v2) with props documented.
+- A docs page in `apps/web` (`/#design-system`) that renders every component in every state, in both themes.
+- **Visual regression tests:** Playwright screenshots of that page in light and dark; CI fails on unexpected pixel changes.
+
+### B3. The explorer as a federated module — M
+
+- `apps/web` builds the explorer as a **remote** with Module Federation (`@module-federation/vite`); `apps/shell` is a **host** that loads it at runtime from a manifest.
+- React and React DOM are shared singletons; the host checks the remote's declared version range and refuses an incompatible one with a clear message instead of failing at runtime.
+- **Graceful failure:** if the remote can't load (offline, 404, a thrown error during render), the host shows a fallback with Retry, and the rest of the host keeps working. A switch in the shell demonstrates each failure.
+- Both apps deploy to GitHub Pages under one URL (`/` and `/shell/`).
+
+### B4. Release confidence — S
+
+- A preview build for every pull request, with a link posted in the PR checks.
+- Per-package bundle budgets (`size-limit`) and the performance budgets from section 3, in CI.
+- Lighthouse CI on the deployed demo for performance and accessibility scores.
+- A changelog generated from conventional commits.
+
+## 8. Plan
+
+Each phase is its own pull request with a green CI, so every step can be reviewed on its own.
+
+| Phase | Content                                                                                                      | Effort   |
+| ----- | ------------------------------------------------------------------------------------------------------------ | -------- |
+| P0    | Monorepo, design system package, shared config (B1, B2 without visual tests), GitHub Pages deploy            | 2–3 days |
+| P1    | Quality: ADRs, property-based tests, mutation testing, runtime validation, product page (Q1–Q5)              | 2–3 days |
+| P2    | Performance: panel, CI budgets, fixes 4.2 a–f, virtualized "Move to", clearer drag and drop (F12)            | 3–4 days |
+| P3    | Scale: worker server, lazy folders, infinite pages, server search, 1M drive (F1)                             | 4–6 days |
+| P4    | Product: list view, filters, cancel and undo (F2, F3, F11)                                                   | 5–6 days |
+| P5    | Storage insights treemap (F4), optional minimap (F5)                                                         | 2–3 days |
+| P6    | Platform: federated explorer with failure fallback, visual regression, release confidence (B2 tests, B3, B4) | 3–4 days |
+| Later | Multi-select (F6), live updates (F7), rename and Trash, preview, persistence (F8–F10), custom order (F13)    | —        |
+
+Every phase keeps: tests at the agreed coverage level, axe clean in both themes, keyboard parity, an ADR for any new decision, and a TECH.md update with numbers.
+
+## 9. Risks
+
+| Risk                                                               | Mitigation                                                                                                                                  |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| A partially loaded tree makes moves, counts and focus much harder  | One normalized store; folders carry `childCount`; the row model is the only place that knows about unloaded ranges; heavy unit tests on it. |
+| 1M items in the worker use a lot of memory on phones               | Measure in P1. Fallback: generate each folder's children on demand from a seed (no full copy in memory), and keep a smaller search index.   |
+| Bundle grows with each feature                                     | Lazy-load F4, F5, F9; `size-limit` in CI.                                                                                                   |
+| 100% coverage slows down feature work                              | Decide the threshold before P0 (see questions).                                                                                             |
+| The monorepo and federation add setup a reviewer has to understand | ADR 0008 and 0009, a diagram in TECH.md, and one command (`npm run dev`) that starts everything.                                            |
+
+## 10. Open questions
+
+1. Pull requests: merge the v1 PR first, then one PR per phase (recommended), or everything in one PR?
+2. 1,000,000 items, or 250,000 to keep phones comfortable? Default: 1,000,000, with the fallback from section 9 if memory is a problem.
+3. Coverage: keep 100% everywhere, or 100% for `model/` and `state/` and 95% elsewhere? Default: the second, with the mutation score (Q3) as the stronger signal.
+4. Custom order (F13): build it later, or keep items always sorted? Default: later.
+5. Tooling for AI coding agents (an `AGENTS.md` describing the design system and conventions): include, or keep the repo free of any AI-related files? Default: leave it out.
