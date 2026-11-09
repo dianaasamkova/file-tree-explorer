@@ -45,6 +45,7 @@ describe('explorerReducer', () => {
       { type: 'reveal', id: 'notes', ancestorIds: ['old', 'docs'] },
     )
     expect(state.expandedIds).toEqual(new Set(['old', 'docs']))
+    expect(state.search.expandedIds).toEqual(new Set(['old', 'docs']))
     expect(state.search.collapsedIds.size).toBe(0)
     expect(state).toMatchObject({ selectedId: 'notes', focusedId: 'notes' })
   })

@@ -67,6 +67,27 @@
   --color-guide: var(--guide);
 }
 
+/*
+ * The explorer screen: search and tree on the left, details on the right, status bar below.
+ * On phones everything stacks, with the tree at a fixed share of the screen.
+ */
+@layer components {
+  .explorer-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 60vh auto auto;
+    grid-template-areas: 'search' 'main' 'details' 'status';
+  }
+
+  @media (width >= 48rem) {
+    .explorer-grid {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-areas: 'search details' 'main details' 'status status';
+    }
+  }
+}
+
 @layer base {
   html,
   body,

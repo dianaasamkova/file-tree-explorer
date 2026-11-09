@@ -20,7 +20,7 @@ A file manager's tree done properly: browse a drive with the keyboard or the mou
 - **10,000 items, about 30 rows in the DOM.** The tree is flattened and virtualized; search runs at a lower priority with `useDeferredValue`, so typing stays responsive.
 - **Shareable state.** The search, selected file and drive live in the URL (`?q=…&file=…&dataset=large`).
 - **Light and dark themes designed together**, following the system setting until you choose, with no flash on load.
-- **Tested:** 143 unit and component tests at 100% coverage of statements, branches, functions and lines (enforced in CI) and a Playwright suite for keyboard use, drag and drop, the 10,000-item drive and accessibility.
+- **Tested:** 155 unit and component tests at 100% coverage of statements, branches, functions and lines (enforced in CI) and a Playwright suite for keyboard use, drag and drop, the 10,000-item drive and accessibility.
 
 ## Tech stack
 

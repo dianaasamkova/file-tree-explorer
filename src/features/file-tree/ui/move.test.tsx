@@ -237,6 +237,44 @@ describe('drag and drop', () => {
     expect(scrollTop).toBe(endedAt)
   })
 
+  it('opens folders only for drags from this tree, and stops when the drag leaves the tree', async () => {
+    await renderLoaded()
+    // A file dragged in from the desktop: nothing can be dropped, so nothing opens.
+    fireEvent.dragOver(getItem('Media'), { dataTransfer: dataTransfer() })
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    expect(getItem('Media')).toHaveAttribute('aria-expanded', 'false')
+
+    // Hovering a folder and then leaving the tree cancels the pending open.
+    fireEvent.dragStart(getItem('Welcome.md'), { dataTransfer: dataTransfer() })
+    fireEvent.dragOver(getItem('Media'), { dataTransfer: dataTransfer() })
+    fireEvent.dragLeave(screen.getByRole('tree'), { relatedTarget: document.body })
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    expect(getItem('Media')).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.dragEnd(getItem('Welcome.md'), { dataTransfer: dataTransfer() })
+  })
+
+  it('keeps the dragged row in the DOM while the tree scrolls far away from it', async () => {
+    const { user } = renderApp({ url: '/?dataset=large' })
+    // The first top-level folder; after `*` its children may have the same name.
+    const assets = await findItem('Assets')
+    const backups = getItem('Backups')
+    screen.getByRole('tree').focus()
+    await user.keyboard('*')
+    const tree = screen.getByRole('tree')
+    fireEvent.dragStart(assets, { dataTransfer: dataTransfer() })
+    expect(assets.className).toContain('opacity-40')
+
+    // Scroll a few thousand pixels down: the first rows leave the virtual window.
+    Object.defineProperty(tree, 'scrollTop', { configurable: true, value: 5000 })
+    fireEvent.scroll(tree)
+    await waitFor(() => expect(backups).not.toBeInTheDocument())
+    expect(assets).toBeInTheDocument()
+
+    // Its dragend still arrives, so the drag state is cleared.
+    fireEvent.dragEnd(assets, { dataTransfer: dataTransfer() })
+    expect(assets.className).not.toContain('opacity-40')
+  })
+
   it('ignores drag events that did not start in the tree', async () => {
     await renderLoaded()
     expect(fireEvent.dragOver(getItem('Drafts'), { dataTransfer: dataTransfer() })).toBe(true)

@@ -389,4 +389,3 @@ Every phase keeps: tests at the agreed coverage level, axe clean in both themes,
 2. 1,000,000 items, or 250,000 to keep phones comfortable? Default: 1,000,000, with the fallback from section 9 if memory is a problem.
 3. Coverage: keep 100% everywhere, or 100% for `model/` and `state/` and 95% elsewhere? Default: the second, with the mutation score (Q3) as the stronger signal.
 4. Custom order (F13): build it later, or keep items always sorted? Default: later.
-5. Tooling for AI coding agents (an `AGENTS.md` describing the design system and conventions): include, or keep the repo free of any AI-related files? Default: leave it out.

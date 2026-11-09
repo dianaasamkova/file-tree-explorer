@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronRight, Scissors } from 'lucide-react'
 import {
   useEffect,
+  useEffectEvent,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -19,6 +20,7 @@ import type { VisibleRow } from '../model/visible'
 import { FileIcon } from './file-icon'
 import { Highlight } from './highlight'
 import { useDragAutoScroll } from './use-drag-auto-scroll'
+import { withPinnedIndexes } from './virtual-range'
 
 const ROW_HEIGHT = 32
 const INDENT = 20
@@ -98,6 +100,7 @@ export function TreeView({
   // Focus falls back to the first row when the focused item is filtered out or not set yet.
   const focusedIndex = indexById.get(focusedId ?? '') ?? 0
   const focusedRow = rows[focusedIndex]!
+  const dragIndex = dragId === null ? undefined : indexById.get(dragId)
 
   // eslint-disable-next-line react-hooks/incompatible-library -- the component is not compiled by React Compiler.
   const virtualizer = useVirtualizer({
@@ -106,11 +109,13 @@ export function TreeView({
     estimateSize: () => ROW_HEIGHT,
     overscan: 12,
     getItemKey: (index) => rows[index]!.id,
+    rangeExtractor: (range) => withPinnedIndexes(range, [focusedIndex, dragIndex]),
   })
 
-  useEffect(() => {
-    virtualizer.scrollToIndex(focusedIndex, { align: 'auto' })
-  }, [focusedIndex, virtualizer])
+  // Scroll when focus moves to another item, not when rows are added or removed around it:
+  // that would pull the view back while the user scrolls or drags elsewhere.
+  const scrollToFocused = useEffectEvent(() => virtualizer.scrollToIndex(focusedIndex, { align: 'auto' }))
+  useEffect(() => scrollToFocused(), [focusedRow.id])
 
   useEffect(() => () => clearTimeout(expandTimer.current?.timer), [])
 
@@ -216,8 +221,7 @@ export function TreeView({
   // path (the "Move to" picker), as WCAG 2.5.7 asks.
   const clearDrag = () => {
     autoScroll.stop()
-    clearTimeout(expandTimer.current?.timer)
-    expandTimer.current = null
+    cancelAutoExpand()
     setDragId(null)
     setDrop(null)
   }
@@ -234,10 +238,15 @@ export function TreeView({
     }
   }
 
-  const scheduleAutoExpand = (row: VisibleRow) => {
-    if (expandTimer.current?.id === row.id) return
+  const cancelAutoExpand = () => {
     clearTimeout(expandTimer.current?.timer)
     expandTimer.current = null
+  }
+
+  /** Opens a collapsed folder that an item from this tree is held over for a moment. */
+  const scheduleAutoExpand = (row: VisibleRow) => {
+    if (dragId === null || expandTimer.current?.id === row.id) return
+    cancelAutoExpand()
     if (row.node.type !== 'folder' || row.isExpanded || row.id === dragId) return
     expandTimer.current = { id: row.id, timer: setTimeout(() => onToggle(row.id, true), AUTO_EXPAND_DELAY) }
   }
@@ -282,6 +291,7 @@ export function TreeView({
         onDragLeave={(event) => {
           if (event.currentTarget.contains(event.relatedTarget as Node | null)) return
           autoScroll.stop()
+          cancelAutoExpand()
           setDrop(null)
         }}
         onDrop={handleDrop}

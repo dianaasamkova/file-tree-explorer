@@ -54,7 +54,7 @@ function PanelFrame({ children }: { children: ReactNode }) {
   return (
     <aside
       aria-labelledby={headingId}
-      className="border-border bg-surface flex min-h-0 flex-col overflow-y-auto border-t md:w-80 md:shrink-0 md:border-t-0 md:border-l"
+      className="border-border bg-surface flex min-h-0 flex-col overflow-y-auto border-t md:border-t-0 md:border-l"
     >
       <h2 id={headingId} className="sr-only">
         Details

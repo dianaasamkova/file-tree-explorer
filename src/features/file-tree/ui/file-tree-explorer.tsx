@@ -58,36 +58,37 @@ export function FileTreeExplorer({ dataset }: { dataset: DatasetId }) {
     [dispatch],
   )
 
-  const search = <SearchBox value={query} onChange={changeQuery} />
-
-  // Data wins over an error: if a background refresh fails, the tree the user is working in stays.
-  if (treeQuery.data) {
-    return (
-      <LoadedExplorer
-        dataset={dataset}
-        tree={treeQuery.data}
-        query={query}
-        onQueryChange={changeQuery}
-        searchBox={search}
-        state={state}
-        dispatch={dispatch}
-      />
-    )
-  }
-
+  // The search box stays mounted at the same place while the content around it switches from
+  // loading to loaded, so typing during the first load keeps focus and text.
   return (
-    <ExplorerLayout
-      search={search}
-      main={
-        treeQuery.isError ? (
-          <ErrorState message={treeQuery.error.message} onRetry={() => void treeQuery.refetch()} />
-        ) : (
-          <LoadingState />
-        )
-      }
-      details={<DetailsPlaceholder />}
-      status={<StatusBar total={null} matches={null} query="" cutNode={undefined} />}
-    />
+    <div className="explorer-grid min-h-0 flex-1">
+      <div role="search" className="border-border border-b p-3 [grid-area:search]">
+        <SearchBox value={query} onChange={changeQuery} />
+      </div>
+      {/* Data wins over an error: if a background refresh fails, the tree the user is working in stays. */}
+      {treeQuery.data ? (
+        <LoadedExplorer
+          dataset={dataset}
+          tree={treeQuery.data}
+          query={query}
+          onQueryChange={changeQuery}
+          state={state}
+          dispatch={dispatch}
+        />
+      ) : (
+        <ExplorerSlots
+          main={
+            treeQuery.isError ? (
+              <ErrorState message={treeQuery.error.message} onRetry={() => void treeQuery.refetch()} />
+            ) : (
+              <LoadingState />
+            )
+          }
+          details={<DetailsPlaceholder />}
+          status={<StatusBar total={null} matches={null} query="" cutNode={undefined} />}
+        />
+      )}
+    </div>
   )
 }
 
@@ -96,13 +97,12 @@ interface LoadedExplorerProps {
   tree: Tree
   query: string
   onQueryChange(value: string): void
-  searchBox: ReactNode
   state: ExplorerState
   dispatch: Dispatch<ExplorerAction>
 }
 
 /** Everything that needs the tree; it only renders once the tree has loaded. */
-function LoadedExplorer({ dataset, tree, query, onQueryChange, searchBox, state, dispatch }: LoadedExplorerProps) {
+function LoadedExplorer({ dataset, tree, query, onQueryChange, state, dispatch }: LoadedExplorerProps) {
   // Typing stays responsive on 10,000 items: filtering renders at a lower priority.
   const deferredQuery = useDeferredValue(query)
   const move = useMoveMutation(dataset)
@@ -110,7 +110,12 @@ function LoadedExplorer({ dataset, tree, query, onQueryChange, searchBox, state,
 
   const search = useMemo(() => searchTree(tree, deferredQuery), [tree, deferredQuery])
   const mode: ExpansionMode = search ? 'search' : 'browse'
-  const expandedIds = useMemo(() => getExpandedIds(state, search), [state, search])
+  // Only the expansion fields: focus and selection change on every key press and don't affect the rows.
+  const { expandedIds: browseExpandedIds, search: searchExpansion } = state
+  const expandedIds = useMemo(
+    () => getExpandedIds({ expandedIds: browseExpandedIds, search: searchExpansion }, search),
+    [browseExpandedIds, searchExpansion, search],
+  )
   const rows = useMemo(() => getVisibleRows(tree, expandedIds, search?.visibleIds), [tree, expandedIds, search])
 
   // A shared link (?file=…) opens the folders above the item. Only once: later the tree changes with every move.
@@ -141,8 +146,7 @@ function LoadedExplorer({ dataset, tree, query, onQueryChange, searchBox, state,
   }
 
   return (
-    <ExplorerLayout
-      search={searchBox}
+    <ExplorerSlots
       main={
         rows.length === 0 ? (
           <EmptyState query={search ? query : null} onClear={() => onQueryChange('')} />
@@ -182,22 +186,15 @@ function LoadedExplorer({ dataset, tree, query, onQueryChange, searchBox, state,
   )
 }
 
-function ExplorerLayout({
-  search,
-  main,
-  details,
-  status,
-}: Record<'search' | 'main' | 'details' | 'status', ReactNode>) {
+/** Places the parts of the screen in the explorer grid (see `.explorer-grid` in index.css). */
+function ExplorerSlots({ main, details, status }: Record<'main' | 'details' | 'status', ReactNode>) {
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <section aria-label="Files" className="flex h-[65vh] min-h-0 flex-col md:h-auto md:flex-1">
-          <div className="border-border border-b p-3">{search}</div>
-          <div className="min-h-0 flex-1">{main}</div>
-        </section>
-        {details}
-      </div>
-      {status}
+      <section aria-label="Files" className="min-h-0 [grid-area:main]">
+        {main}
+      </section>
+      <div className="flex min-h-0 [grid-area:details] *:flex-1">{details}</div>
+      <div className="[grid-area:status]">{status}</div>
     </>
   )
 }

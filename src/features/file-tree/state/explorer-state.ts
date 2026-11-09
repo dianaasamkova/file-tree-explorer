@@ -67,8 +67,13 @@ export function explorerReducer(state: ExplorerState, action: ExplorerAction): E
     case 'reveal':
       return {
         ...state,
+        // Open the folders in both modes: while searching, an item inside a matching folder's
+        // content isn't opened by the search itself.
         expandedIds: withAdded(state.expandedIds, action.ancestorIds),
-        search: { ...state.search, collapsedIds: without(state.search.collapsedIds, action.ancestorIds) },
+        search: {
+          expandedIds: withAdded(state.search.expandedIds, action.ancestorIds),
+          collapsedIds: without(state.search.collapsedIds, action.ancestorIds),
+        },
         selectedId: action.id,
         focusedId: action.id,
       }
@@ -84,7 +89,10 @@ export function explorerReducer(state: ExplorerState, action: ExplorerAction): E
 }
 
 /** Folders shown open right now: the user's own while browsing, or the search's plus tweaks. */
-export function getExpandedIds(state: ExplorerState, search: SearchResult | null): ReadonlySet<NodeId> {
+export function getExpandedIds(
+  state: Pick<ExplorerState, 'expandedIds' | 'search'>,
+  search: SearchResult | null,
+): ReadonlySet<NodeId> {
   if (!search) return state.expandedIds
   const expanded = new Set([...search.autoExpandedIds, ...state.search.expandedIds])
   for (const id of state.search.collapsedIds) expanded.delete(id)

@@ -36,6 +36,25 @@ describe('loading', () => {
     expect(await findItem('Clients')).toBeInTheDocument()
   })
 
+  it('keeps focus and text in the search box when the drive finishes loading', async () => {
+    const api = createMockApi()
+    const getTree = api.getTree
+    let finish: () => void = () => {}
+    api.getTree = vi.fn<typeof getTree>(
+      (dataset, signal) => new Promise((resolve) => (finish = () => resolve(getTree(dataset, signal)))),
+    )
+    const { user } = renderApp({ api })
+    const input = screen.getByRole('searchbox')
+
+    await user.type(input, 'kick')
+    finish()
+
+    expect(await screen.findAllByRole('treeitem', { name: /^Kickoff notes/ })).toHaveLength(2)
+    expect(screen.getByRole('searchbox')).toBe(input)
+    expect(input).toHaveFocus()
+    expect(input).toHaveValue('kick')
+  })
+
   it('shows the skeleton again while retrying', async () => {
     const api = createMockApi()
     let finish: () => void = () => {}
@@ -139,6 +158,30 @@ describe('keyboard', () => {
     expect(getActiveItem()).toBe(getItem('Team'))
     await user.keyboard('{Escape}')
     expect(getActiveItem()).toBe(getItem('Team'))
+  })
+
+  it('keeps the focused row in the DOM, so aria-activedescendant always points to a real item', async () => {
+    const { user } = renderApp({ url: '/?dataset=large' })
+    await findItem('Assets')
+    screen.getByRole('tree').focus()
+    await user.keyboard('*{End}')
+    // jsdom doesn't scroll, so the last row is far outside the rendered window, yet it exists.
+    expect(getActiveItem()).not.toBeNull()
+    expect(getActiveItem()).toHaveAttribute('aria-level', '1')
+  })
+
+  it('scrolls when focus moves, not when rows change above the focused item', async () => {
+    const { user } = await renderLoaded()
+    const scrollTo = vi.spyOn(Element.prototype, 'scrollTo')
+    screen.getByRole('tree').focus()
+    await user.keyboard('*{End}')
+    // Welcome.md is the 26th row, below the 640 px viewport: focusing it scrolls.
+    await waitFor(() => expect(scrollTo).toHaveBeenCalled())
+    const calls = scrollTo.mock.calls.length
+
+    await user.click(within(getItem('Archive')).getByTestId('toggle'))
+    expect(getItem('Archive')).toHaveAttribute('aria-expanded', 'false')
+    expect(scrollTo).toHaveBeenCalledTimes(calls)
   })
 
   it('"/" focuses the search box', async () => {
@@ -260,6 +303,13 @@ describe('URL', () => {
     expect(await findItem('Invoice 2026-09.pdf')).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('searchbox')).toHaveValue('invoice')
     expect(getDetails().getByText('Invoice 2026-09.pdf')).toBeInTheDocument()
+  })
+
+  it('opens a linked file inside a matching folder while searching', async () => {
+    // "media" matches the Media folder: its content is shown, but not opened by the search.
+    renderApp({ url: '/?q=media&file=media/photos/offsite-1-jpg' })
+    expect(await findItem('Offsite 1.jpg')).toHaveAttribute('aria-selected', 'true')
+    expect(getItem('Photos')).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('opens the folders above a linked file', async () => {
