@@ -38,6 +38,20 @@ flowchart LR
   end
 ```
 
+### Packages
+
+```
+apps/web  ──▶  @fte/file-tree  ──▶  @fte/ui
+    └──────────────────────────────▲
+```
+
+- **`@fte/ui`** is the design system: colour roles as CSS variables (light and dark), their TypeScript names, and the primitives. It depends on no feature.
+- **`@fte/file-tree`** is the feature, with no app code: it exports `FileTreeExplorer`, the API contract and the mock server, and test helpers under `@fte/file-tree/testing`.
+- **`apps/web`** is the shell: header, theme, drive switch, the design system page (`#design-system`), and the end-to-end tests.
+- Lint enforces the arrows: the design system can't import a feature, a feature can't import an app, and nobody imports another package's internal files. Packages ship TypeScript source; the app's Vite build compiles them, so there's no build step per package.
+
+Inside `@fte/file-tree`:
+
 - **`model/`** is plain TypeScript with no React: normalizing the API response, move rules, search and the flattening of the tree into rows. It's where the logic lives and where most tests are.
 - **`api/`** holds the backend contract (`FileTreeApi`), an in-memory implementation, and the Query hooks. The UI gets the client through context, so tests and the demo inject their own.
 - **`state/`** is one typed reducer for UI state.
@@ -53,6 +67,7 @@ To render, `getVisibleRows` walks the tree once into a flat list of the rows on 
 
 | Decision                                                              | Why                                                                                                                                                                                                                        | Trade-off                                                                                                                                                               |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Monorepo with npm workspaces and Turborepo                            | Shows the boundaries a product team needs: a design system several features share, a feature that doesn't know which app hosts it. Turborepo caches typecheck, test and build per package.                                 | More configuration than one package; packages ship source, so they can only be consumed by a bundler.                                                                   |
 | **No global store** (no Redux or Zustand)                             | The state splits cleanly by kind: server data in TanStack Query, UI state local to one screen in a reducer, shareable state in the URL. Nothing else reads it, so a store would add indirection without solving a problem. | If several screens need the selection later, the reducer moves into context; it's already one typed unit.                                                               |
 | TanStack Query for the tree                                           | Caching per dataset, loading and error states, cancelation, and a standard pattern for optimistic updates with rollback.                                                                                                   | One more dependency (10.6 KB gzipped).                                                                                                                                  |
 | Optimistic moves, rollback, Undo in the toast                         | Moving should feel instant. Rollback keeps the UI honest when the server says no; Undo makes a mistaken drop cheap.                                                                                                        | Two quick moves where the first fails roll back to the first one's snapshot; the refetch after every move puts the tree right again.                                    |
@@ -80,10 +95,10 @@ To render, `getVisibleRows` walks the tree once into a flat list of the rows on 
 | Layer      | Tool                                  | What                                                                                                                                                                                                                                              | Count |
 | ---------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | Unit       | Vitest                                | Normalizing, sorting, move rules, search, row flattening, formatting, the dataset generator, the mock server, the reducer                                                                                                                         | 108   |
-| Component  | Vitest + Testing Library + user-event | The whole app against the in-memory server with no latency: keyboard, typeahead, search, details, Move to, cut and paste, drag and drop with a `dataTransfer` mock, optimistic rollback with a controlled promise, Undo, URL, theme, drive switch | 47    |
+| Component  | Vitest + Testing Library + user-event | The whole app against the in-memory server with no latency: keyboard, typeahead, search, details, Move to, cut and paste, drag and drop with a `dataTransfer` mock, optimistic rollback with a controlled promise, Undo, URL, theme, drive switch | 52    |
 | End to end | Playwright                            | Production build in Chromium: keyboard-only flow from the skip link, real drag and drop with rollback, scrolling 10,000 items, auto-scroll while dragging, axe in both themes                                                                     | 6     |
 
-Coverage is 100% for statements, branches, functions and lines, and CI fails below that. Only test files are excluded. Getting there removed code rather than adding contrived tests: guards for states that can't happen were designed out (the loaded explorer is a separate component that always has a tree), and the remaining gaps were real behavior: an empty drive, a failed background refresh, a retry, Alt shortcuts, the ⌘ label on a Mac. Component tests use the real sample drive, so they read like the product ("drag Welcome.md onto Drafts") rather than like fixtures. jsdom has no layout, so the setup file gives elements a size and mocks `ResizeObserver` for TanStack Virtual.
+Each package sets its own coverage thresholds, and CI fails below them: 100% for the data logic (`model/` and `state/`) and 95% elsewhere. Today every package is at 100%. Only test files are excluded. Getting there removed code rather than adding contrived tests: guards for states that can't happen were designed out (the loaded explorer is a separate component that always has a tree), and the remaining gaps were real behavior: an empty drive, a failed background refresh, a retry, Alt shortcuts, the ⌘ label on a Mac. Component tests use the real sample drive, so they read like the product ("drag Welcome.md onto Drafts") rather than like fixtures. jsdom has no layout, so the setup file gives elements a size and mocks `ResizeObserver` for TanStack Virtual.
 
 ## 6. Bundle size
 

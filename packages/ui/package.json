@@ -1,0 +1,24 @@
+{
+  "name": "@fte/ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Design system: tokens and primitives shared by every app.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.7.0"
+  },
+  "peerDependencies": {
+    "react": "^19.3.1"
+  }
+}

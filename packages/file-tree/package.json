@@ -1,0 +1,27 @@
+{
+  "name": "@fte/file-tree",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "The file tree feature: model, API client, UI state and components.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css",
+    "./testing": "./src/test/render.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@fte/ui": "*",
+    "@tanstack/react-query": "^5.107.1",
+    "@tanstack/react-virtual": "^3.14.26",
+    "lucide-react": "^1.70.0",
+    "sonner": "^2.0.8"
+  },
+  "peerDependencies": {
+    "react": "^19.3.1"
+  }
+}

@@ -1,0 +1,41 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/geist';
+
+@import '@fte/ui/tokens.css';
+@import '@fte/file-tree/styles.css';
+
+/* Workspace packages are outside this app's folder, so tell Tailwind to scan them for classes. */
+@source '../../../packages/ui/src';
+@source '../../../packages/file-tree/src';
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  /* The page behind the app (overscroll, a host page's own styles) follows the theme too. */
+  html {
+    background: var(--background);
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  :focus-visible {
+    @apply outline-accent outline-2 outline-offset-2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

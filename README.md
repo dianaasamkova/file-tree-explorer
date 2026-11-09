@@ -9,6 +9,8 @@ A file manager's tree done properly: browse a drive with the keyboard or the mou
   <img src="docs/screenshot-light.png" alt="The explorer with Finance › Invoices open and an invoice selected. The details panel shows its size, date, location and a Move to picker.">
 </picture>
 
+**[Open the live demo](https://dianaasamkova.github.io/file-tree-explorer/)** · [Design system](https://dianaasamkova.github.io/file-tree-explorer/#design-system)
+
 > Started in 2024 as a take-home assignment (a searchable tree in Create React App and MUI). Rebuilt in 2026 from scratch as a production-grade feature; [TECH.md](TECH.md) explains the decisions, trade-offs and measurements.
 
 ## Highlights
@@ -20,11 +22,12 @@ A file manager's tree done properly: browse a drive with the keyboard or the mou
 - **10,000 items, about 30 rows in the DOM.** The tree is flattened and virtualized; search runs at a lower priority with `useDeferredValue`, so typing stays responsive.
 - **Shareable state.** The search, selected file and drive live in the URL (`?q=…&file=…&dataset=large`).
 - **Light and dark themes designed together**, following the system setting until you choose, with no flash on load.
-- **Tested:** 155 unit and component tests at 100% coverage of statements, branches, functions and lines (enforced in CI) and a Playwright suite for keyboard use, drag and drop, the 10,000-item drive and accessibility.
+- **Organised like a product team's codebase.** A monorepo with a design system package (`@fte/ui`), a feature package (`@fte/file-tree`) and the app, with dependency rules enforced by lint, a page that shows every token and component, and builds and tests cached by Turborepo.
+- **Tested:** 160 unit and component tests. Coverage is 100% today; CI requires 100% for the data logic and 95% elsewhere. A Playwright suite covers keyboard use, drag and drop, the 10,000-item drive and accessibility.
 
 ## Tech stack
 
-React 19 · TypeScript 6 (strict) · Vite 8 · Tailwind CSS 4 with shadcn/ui-style components · TanStack Query · TanStack Virtual · Vitest + Testing Library · Playwright + axe
+React 19 · TypeScript 6 (strict) · Vite 8 · Tailwind CSS 4 with shadcn/ui-style components · TanStack Query · TanStack Virtual · Vitest + Testing Library · Playwright + axe · npm workspaces + Turborepo · GitHub Actions and Pages
 
 ## Quick start
 
@@ -39,34 +42,40 @@ The backend is an in-browser mock with 400 ms of latency, so loading states and 
 
 ## Scripts
 
-| Script                  | What it does                                    |
-| ----------------------- | ----------------------------------------------- |
-| `npm run dev`           | Development server                              |
-| `npm run build`         | Typecheck and production build                  |
-| `npm run preview`       | Serve the production build                      |
-| `npm test`              | Unit and component tests                        |
-| `npm run test:coverage` | Tests with coverage thresholds (100%)           |
-| `npm run test:e2e`      | Playwright tests against the production build   |
-| `npm run lint`          | ESLint                                          |
-| `npm run format`        | Prettier (with class sorting for Tailwind)      |
-| `npm run typecheck`     | TypeScript project build without emitting files |
+Run them from the repository root; Turborepo runs each package's task and caches the result.
+
+| Script                  | What it does                                       |
+| ----------------------- | -------------------------------------------------- |
+| `npm run dev`           | Development server for the demo app                |
+| `npm run build`         | Production build                                   |
+| `npm run preview`       | Serve the production build                         |
+| `npm test`              | Unit and component tests in every package          |
+| `npm run test:coverage` | Tests with each package's coverage thresholds      |
+| `npm run test:e2e`      | Playwright tests against the production build      |
+| `npm run typecheck`     | TypeScript in every package                        |
+| `npm run lint`          | ESLint, including the rules for package boundaries |
+| `npm run format`        | Prettier (with class sorting for Tailwind)         |
 
 Before the first e2e run: `npx playwright install chromium`.
 
 ## Project structure
 
 ```
-src/
-├── app.tsx                    # Shell: header, drive switch, theme, toasts
-├── components/ui/             # Small shadcn/ui-style primitives (Button, Kbd, Skeleton)
-├── hooks/                     # useTheme, useUrlState
-└── features/file-tree/
-    ├── model/                 # Pure domain logic, no React: tree, move rules, search, formatting
-    ├── api/                   # Mock backend, datasets, TanStack Query hooks
-    ├── state/                 # UI-state reducer: expanded, selected, focused, cut
-    └── ui/                    # Explorer, virtualized tree, details panel, search, status bar
-e2e/                           # Playwright tests
+apps/
+└── web/                       # The demo: shell (header, theme, drive switch), design system page, e2e tests
+packages/
+├── ui/                        # @fte/ui: design tokens and primitives (Button, Kbd, Skeleton)
+├── file-tree/                 # @fte/file-tree: the feature
+│   └── src/
+│       ├── model/             # Pure domain logic, no React: tree, move rules, search, formatting
+│       ├── api/               # Mock backend, datasets, TanStack Query hooks
+│       ├── state/             # UI-state reducer: expanded, selected, focused, cut
+│       └── ui/                # Explorer, virtualized tree, details panel, search, status bar
+└── config/                    # Shared TypeScript and Vitest settings
+docs/specs/                    # Specs for upcoming work
 ```
+
+Dependencies only point down: the app uses the feature and the design system, the feature uses the design system, and the design system uses neither. Packages are imported only through their entry points.
 
 ## Docs
 
