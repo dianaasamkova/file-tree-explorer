@@ -1,46 +1,52 @@
-# Getting Started with Create React App
+# File Tree Explorer
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+[![CI](https://github.com/dianaasamkova/spendbase/actions/workflows/ci.yml/badge.svg)](https://github.com/dianaasamkova/spendbase/actions/workflows/ci.yml)
 
-## Available Scripts
+A searchable file-and-folder tree in React: nested folders, multi-select, and a search that keeps the path to every match.
 
-In the project directory, you can run:
+<img src="docs/screenshot.png" alt="Tree filtered by the query 'file': folderA and subfolderAB stay visible because they contain matching files" width="480">
 
-### `yarn start`
+> **Context:** a 2024 take-home assignment. I revisited it in 2026, fixed a search bug, added tests and CI, and documented the design decisions and what I'd change. See [TECH.md](TECH.md).
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Highlights
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- **Search that keeps context.** Files match by name, and their parent folders stay visible, so the user always sees *where* a match lives. A folder that matches by name keeps all of its contents.
+- **Auto-expand on search.** Results open automatically, so matches are never hidden inside collapsed folders.
+- **Debounced input.** The input updates on every keystroke, but the tree filters only after the user stops typing.
+- **Pure, tested logic.** Search and id-collection are plain recursive functions, separate from the UI and covered by unit tests.
+- **Typed data contract.** `Folder | File` is a discriminated tree type that mirrors the backend response.
 
-### `yarn test`
+## Tech stack
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+React 18 · TypeScript · MUI 5 + MUI X Tree View 7 · Jest + Testing Library · Create React App
 
-### `yarn build`
+## Quick start
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Requires Node 18+ and Yarn 1.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+yarn install
+yarn start        # http://localhost:3000
+yarn test         # unit tests
+yarn build        # production build
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The data comes from a local mock, [`src/components/tree/response.json`](src/components/tree/response.json), so no backend is needed.
 
-### `yarn eject`
+## Project structure
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+```
+src/components/
+├── search/           # Search input (MUI InputBase)
+└── tree/
+    ├── index.tsx       # TreeView: state, debounced search, expand/select
+    ├── handlers.tsx    # buildTree, searchFolders, getFoldersAndFilesIds (pure)
+    ├── handlers.spec.ts
+    ├── definitions.ts  # Folder / File / BackendResponse types
+    ├── styles.ts       # Styled TreeItem with guide lines
+    └── response.json   # Mock backend response
+```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Docs
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- [TECH.md](TECH.md): architecture, decisions and trade-offs, a 2026 retrospective, and a roadmap.
