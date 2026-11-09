@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, vi } from 'vitest'
 
 // jsdom has no layout. TanStack Virtual measures its scroll element and observes resizes, so give
@@ -50,5 +51,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  // sonner keeps toasts in a module-level store; without this, one test could see another's toast.
+  toast.dismiss()
   vi.useRealTimers()
 })

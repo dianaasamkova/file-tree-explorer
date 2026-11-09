@@ -35,6 +35,15 @@ export function normalizeTree(response: ApiTreeResponse): Tree {
   return { rootIds: sortIds(rootIds, nodes), nodes }
 }
 
+/** What the UI calls the root of the drive. */
+export const ROOT_LABEL = 'Drive'
+
+/** A name to show for an item or the root, with a fallback for an id the tree doesn't have (yet). */
+export function getDisplayName(tree: Tree | undefined, id: FolderTarget): string {
+  if (id === null) return ROOT_LABEL
+  return tree?.nodes[id]?.name ?? 'Unknown item'
+}
+
 /** The reverse of `normalizeTree`: what the backend stores and sends. */
 export function denormalizeTree(tree: Tree): ApiTreeResponse {
   function toApi(id: NodeId): ApiNode {

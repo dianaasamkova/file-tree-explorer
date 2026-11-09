@@ -20,7 +20,7 @@ A file manager's tree done properly: browse a drive with the keyboard or the mou
 - **10,000 items, about 30 rows in the DOM.** The tree is flattened and virtualized; search runs at a lower priority with `useDeferredValue`, so typing stays responsive.
 - **Shareable state.** The search, selected file and drive live in the URL (`?q=…&file=…&dataset=large`).
 - **Light and dark themes designed together**, following the system setting until you choose, with no flash on load.
-- **Tested:** 116 unit and component tests (99% line coverage, enforced in CI) and a Playwright suite for keyboard use, drag and drop, the 10,000-item drive and accessibility.
+- **Tested:** 136 unit and component tests at 100% coverage of statements, branches, functions and lines (enforced in CI) and a Playwright suite for keyboard use, drag and drop, the 10,000-item drive and accessibility.
 
 ## Tech stack
 
@@ -45,7 +45,7 @@ The backend is an in-browser mock with 400 ms of latency, so loading states and 
 | `npm run build`         | Typecheck and production build                  |
 | `npm run preview`       | Serve the production build                      |
 | `npm test`              | Unit and component tests                        |
-| `npm run test:coverage` | Tests with coverage thresholds (90% lines)      |
+| `npm run test:coverage` | Tests with coverage thresholds (100%)           |
 | `npm run test:e2e`      | Playwright tests against the production build   |
 | `npm run lint`          | ESLint                                          |
 | `npm run format`        | Prettier (with class sorting for Tailwind)      |

@@ -36,6 +36,12 @@ export interface MockApiOptions {
   latency?: number
 }
 
+/** Reads `?latency=` from the URL: a number of ms, or the default when missing or invalid. */
+export function parseLatency(value: string | null, fallback = 400): number {
+  const latency = value === null || value.trim() === '' ? NaN : Number(value)
+  return Number.isFinite(latency) && latency >= 0 ? latency : fallback
+}
+
 function delay(ms: number, signal?: AbortSignal): Promise<void> {
   if (ms <= 0) return Promise.resolve()
   return new Promise((resolve, reject) => {

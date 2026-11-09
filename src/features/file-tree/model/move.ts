@@ -1,5 +1,5 @@
 import { compareNodes, getChildIds, isDescendantOf } from './tree'
-import type { FolderTarget, NodeId, Tree } from './types'
+import type { FolderNode, FolderTarget, NodeId, Tree } from './types'
 
 export type MoveError = 'not-found' | 'same-parent' | 'into-self' | 'into-descendant' | 'name-conflict'
 
@@ -50,10 +50,9 @@ export function moveNode(tree: Tree, id: NodeId, target: FolderTarget): Tree {
   if (node.parentId === null) {
     rootIds = rootIds.filter((childId) => childId !== id)
   } else {
-    const oldParent = nodes[node.parentId]!
-    if (oldParent.type === 'folder') {
-      nodes[oldParent.id] = { ...oldParent, childIds: oldParent.childIds.filter((childId) => childId !== id) }
-    }
+    // A parent is always a folder (normalizeTree builds it so), and canMove checked the target.
+    const oldParent = nodes[node.parentId] as FolderNode
+    nodes[oldParent.id] = { ...oldParent, childIds: oldParent.childIds.filter((childId) => childId !== id) }
   }
 
   // Attach to the new parent at its sorted position.
@@ -64,8 +63,8 @@ export function moveNode(tree: Tree, id: NodeId, target: FolderTarget): Tree {
   if (target === null) {
     rootIds = insertSorted(rootIds)
   } else {
-    const newParent = nodes[target]!
-    if (newParent.type === 'folder') nodes[target] = { ...newParent, childIds: insertSorted(newParent.childIds) }
+    const newParent = nodes[target] as FolderNode
+    nodes[target] = { ...newParent, childIds: insertSorted(newParent.childIds) }
   }
 
   return { rootIds, nodes }

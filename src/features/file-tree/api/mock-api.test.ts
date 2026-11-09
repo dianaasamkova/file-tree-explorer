@@ -2,7 +2,7 @@ import { normalizeTree } from '../model/tree'
 import type { ApiNode } from '../model/types'
 import { createRandom, generateDataset } from './datasets/generate'
 import { createSampleDataset, SAMPLE_LOCKED_FOLDER_ID } from './datasets/sample'
-import { ApiError, createMockApi, isDatasetId } from './mock-api'
+import { ApiError, createMockApi, isDatasetId, parseLatency } from './mock-api'
 
 const countItems = (items: ApiNode[]): number =>
   items.reduce((sum, item) => sum + 1 + (item.type === 'folder' ? countItems(item.children) : 0), 0)
@@ -29,6 +29,13 @@ describe('datasets', () => {
       const names = node.childIds.map((id) => tree.nodes[id]!.name.toLowerCase())
       expect(new Set(names).size).toBe(names.length)
     }
+  })
+
+  it('the generated drive starts with top-level folders that all have different names', () => {
+    const tree = normalizeTree(generateDataset(500))
+    const topFolders = tree.rootIds.filter((id) => tree.nodes[id]!.type === 'folder').map((id) => tree.nodes[id]!.name)
+    expect(topFolders).toHaveLength(12)
+    expect(topFolders.every((name) => !name.includes('('))).toBe(true)
   })
 
   it('createRandom gives numbers in range', () => {
@@ -89,5 +96,20 @@ describe('createMockApi', () => {
     const aborted = api.getTree('large', controller.signal)
     controller.abort(new Error('aborted'))
     await expect(aborted).rejects.toThrow('aborted')
+  })
+})
+
+describe('parseLatency', () => {
+  it.each([
+    ['0', 0],
+    ['250', 250],
+    [null, 400],
+    ['', 400],
+    ['  ', 400],
+    ['fast', 400],
+    ['-5', 400],
+    ['Infinity', 400],
+  ])('%j → %d ms', (value, latency) => {
+    expect(parseLatency(value)).toBe(latency)
   })
 })

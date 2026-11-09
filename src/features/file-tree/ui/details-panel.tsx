@@ -1,17 +1,16 @@
 import { ChevronRight } from 'lucide-react'
-import { useId, useMemo, useState, type FormEvent } from 'react'
+import { useId, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
 import { MOD_KEY } from '@/lib/platform'
-import { ROOT_LABEL } from '../api/queries'
 import { formatBytes, formatDate, getFileKind, getKindLabel, pluralize } from '../model/format'
 import { canMove } from '../model/move'
-import { getFolderStats, getPath, listFolders } from '../model/tree'
+import { getFolderStats, getPath, listFolders, ROOT_LABEL } from '../model/tree'
 import type { FolderTarget, NodeId, Tree, TreeNode } from '../model/types'
 import { FileIcon } from './file-icon'
 
 export interface DetailsPanelProps {
-  tree: Tree | undefined
+  tree: Tree
   selectedId: NodeId | null
   onReveal(id: NodeId): void
   onMove(id: NodeId, target: FolderTarget): void
@@ -29,9 +28,29 @@ const shortcuts: [keys: string[], action: string][] = [
 ]
 
 export function DetailsPanel({ tree, selectedId, onReveal, onMove }: DetailsPanelProps) {
-  const headingId = useId()
-  const node = selectedId === null ? undefined : tree?.nodes[selectedId]
+  const node = selectedId === null ? undefined : tree.nodes[selectedId]
+  return (
+    <PanelFrame>
+      {node ? (
+        <NodeDetails key={node.id} tree={tree} node={node} onReveal={onReveal} onMove={onMove} />
+      ) : (
+        <NothingSelected />
+      )}
+    </PanelFrame>
+  )
+}
 
+/** The panel while the drive is loading or failed to load. */
+export function DetailsPlaceholder() {
+  return (
+    <PanelFrame>
+      <NothingSelected />
+    </PanelFrame>
+  )
+}
+
+function PanelFrame({ children }: { children: ReactNode }) {
+  const headingId = useId()
   return (
     <aside
       aria-labelledby={headingId}
@@ -40,27 +59,29 @@ export function DetailsPanel({ tree, selectedId, onReveal, onMove }: DetailsPane
       <h2 id={headingId} className="sr-only">
         Details
       </h2>
-      {tree && node ? (
-        <NodeDetails key={node.id} tree={tree} node={node} onReveal={onReveal} onMove={onMove} />
-      ) : (
-        <div className="p-5">
-          <p className="font-medium">Nothing selected</p>
-          <p className="text-muted mt-1 text-sm">Select a file or folder to see its size, location and actions.</p>
-          <dl className="mt-6 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2.5 text-sm">
-            {shortcuts.map(([keys, action]) => (
-              <div key={action} className="contents">
-                <dt className="flex gap-1">
-                  {keys.map((key) => (
-                    <Kbd key={key}>{key}</Kbd>
-                  ))}
-                </dt>
-                <dd className="text-muted">{action}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
+      {children}
     </aside>
+  )
+}
+
+function NothingSelected() {
+  return (
+    <div className="p-5">
+      <p className="font-medium">Nothing selected</p>
+      <p className="text-muted mt-1 text-sm">Select a file or folder to see its size, location and actions.</p>
+      <dl className="mt-6 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2.5 text-sm">
+        {shortcuts.map(([keys, action]) => (
+          <div key={action} className="contents">
+            <dt className="flex gap-1">
+              {keys.map((key) => (
+                <Kbd key={key}>{key}</Kbd>
+              ))}
+            </dt>
+            <dd className="text-muted">{action}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   )
 }
 

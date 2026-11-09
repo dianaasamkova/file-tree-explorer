@@ -4,12 +4,14 @@ import {
   denormalizeTree,
   getAncestorIds,
   getChildIds,
+  getDisplayName,
   getFolderStats,
   getNode,
   getPath,
   isDescendantOf,
   listFolders,
   normalizeTree,
+  ROOT_LABEL,
 } from './tree'
 
 describe('normalizeTree', () => {
@@ -92,5 +94,15 @@ describe('lookups', () => {
       ['old', 1],
       ['empty', 0],
     ])
+  })
+})
+
+describe('getDisplayName', () => {
+  it('names items, the root, and ids the tree does not have', () => {
+    const tree = createFixtureTree()
+    expect(getDisplayName(tree, 'r2')).toBe('Report 2.pdf')
+    expect(getDisplayName(tree, null)).toBe(ROOT_LABEL)
+    expect(getDisplayName(tree, 'missing')).toBe('Unknown item')
+    expect(getDisplayName(undefined, 'r2')).toBe('Unknown item')
   })
 })

@@ -33,7 +33,9 @@ export interface TreeViewProps {
   id: string
   label: string
   tree: Tree
+  /** The rows on screen. Never empty: the parent shows an empty state instead of the tree. */
   rows: VisibleRow[]
+  /** Falls back to the first row when it is null or not among `rows`. */
   focusedId: NodeId | null
   selectedId: NodeId | null
   cutId: NodeId | null
@@ -91,7 +93,9 @@ export function TreeView({
   useImperativeHandle(ref, () => ({ focus: () => scrollRef.current?.focus() }), [])
 
   const indexById = useMemo(() => new Map(rows.map((row, index) => [row.id, index])), [rows])
-  const focusedIndex = focusedId === null ? -1 : (indexById.get(focusedId) ?? -1)
+  // Focus falls back to the first row when the focused item is filtered out or not set yet.
+  const focusedIndex = indexById.get(focusedId ?? '') ?? 0
+  const focusedRow = rows[focusedIndex]!
 
   // eslint-disable-next-line react-hooks/incompatible-library -- the component is not compiled by React Compiler.
   const virtualizer = useVirtualizer({
@@ -103,7 +107,7 @@ export function TreeView({
   })
 
   useEffect(() => {
-    if (focusedIndex >= 0) virtualizer.scrollToIndex(focusedIndex, { align: 'auto' })
+    virtualizer.scrollToIndex(focusedIndex, { align: 'auto' })
   }, [focusedIndex, virtualizer])
 
   useEffect(() => () => clearTimeout(expandTimer.current?.timer), [])
@@ -113,8 +117,7 @@ export function TreeView({
   const activeGuide = activeFolder === null ? -1 : (rows[indexById.get(activeFolder) ?? -1]?.level ?? 0) - 1
 
   const focusRow = (index: number) => {
-    const row = rows[Math.max(0, Math.min(rows.length - 1, index))]
-    if (row) onFocusItem(row.id)
+    onFocusItem(rows[Math.max(0, Math.min(rows.length - 1, index))]!.id)
   }
 
   /** A new search starts after the focused item; a longer prefix may keep the focused one. */
@@ -128,23 +131,23 @@ export function TreeView({
 
   /** Runs the action for a key and reports whether the key was used. */
   const runKey = (event: KeyboardEvent<HTMLDivElement>): boolean => {
-    const row = rows[focusedIndex]
+    const row = focusedRow
     const key = event.key
 
     if (event.ctrlKey || event.metaKey) {
-      if (key.toLowerCase() === 'x' && row) {
+      if (key.toLowerCase() === 'x') {
         onCut(row.id)
         return true
       }
       if (key.toLowerCase() === 'v' && cutId !== null) {
-        onPaste(row ? getDropTarget(tree, row.id) : null)
+        onPaste(getDropTarget(tree, row.id))
         return true
       }
       return false
     }
     if (event.altKey) return false
 
-    const pageSize = Math.max(1, Math.floor((scrollRef.current?.clientHeight ?? 0) / ROW_HEIGHT) - 1)
+    const pageSize = Math.max(1, Math.floor(scrollRef.current!.clientHeight / ROW_HEIGHT) - 1)
     const moves: Record<string, number> = {
       ArrowDown: focusedIndex + 1,
       ArrowUp: focusedIndex - 1,
@@ -157,8 +160,6 @@ export function TreeView({
       focusRow(moves[key]!)
       return true
     }
-    if (!row) return false
-
     if (key === 'ArrowRight') {
       if (row.node.type === 'folder' && !row.isExpanded) onToggle(row.id, true)
       else if (rows[focusedIndex + 1]?.level === row.level + 1) focusRow(focusedIndex + 1)
@@ -255,7 +256,7 @@ export function TreeView({
         id={treeId}
         role="tree"
         aria-label={label}
-        aria-activedescendant={rows[focusedIndex] ? treeItemId(treeId, rows[focusedIndex].id) : undefined}
+        aria-activedescendant={treeItemId(treeId, focusedRow.id)}
         tabIndex={0}
         className={cn(
           'h-full overflow-auto py-1 outline-none',
@@ -266,8 +267,7 @@ export function TreeView({
           pointerDown.current = true
           setKeyboardMode(false)
         }}
-        onFocus={(event) => {
-          if (event.target !== event.currentTarget) return
+        onFocus={() => {
           setHasFocus(true)
           setKeyboardMode(!pointerDown.current)
           pointerDown.current = false
@@ -298,7 +298,7 @@ export function TreeView({
                 aria-setsize={row.setSize}
                 aria-expanded={isFolder ? row.isExpanded : undefined}
                 aria-selected={isSelected}
-                data-focused={row.id === focusedId || undefined}
+                data-focused={row.id === focusedRow.id || undefined}
                 draggable
                 className={cn(
                   'group text-foreground absolute top-0 left-0 flex w-full cursor-default items-center gap-1.5 pr-3 text-sm select-none',
@@ -307,7 +307,7 @@ export function TreeView({
                   row.id === cutId && 'opacity-55',
                   row.id === dragId && 'opacity-40',
                   isDropTarget && 'bg-accent-soft ring-accent ring-1 ring-inset',
-                  showFocus && row.id === focusedId && 'ring-accent ring-2 ring-inset',
+                  showFocus && row.id === focusedRow.id && 'ring-accent ring-2 ring-inset',
                 )}
                 style={{ height: item.size, transform: `translateY(${item.start}px)` }}
                 onClick={() => {

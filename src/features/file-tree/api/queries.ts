@@ -1,12 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { moveNode } from '../model/move'
-import { normalizeTree } from '../model/tree'
+import { getDisplayName, normalizeTree } from '../model/tree'
 import type { FolderTarget, NodeId, Tree } from '../model/types'
 import { useApi } from './api-context'
 import type { DatasetId } from './mock-api'
-
-export const ROOT_LABEL = 'Drive'
 
 export const treeQueryKey = (dataset: DatasetId) => ['tree', dataset] as const
 
@@ -34,9 +32,6 @@ interface MoveContext {
   targetName: string
 }
 
-const folderName = (tree: Tree | undefined, id: FolderTarget) =>
-  id === null ? ROOT_LABEL : (tree?.nodes[id]?.name ?? 'the folder')
-
 /**
  * Moves an item with an optimistic update: the tree changes at once, rolls back if the server
  * refuses, and every successful move can be undone from the toast.
@@ -53,19 +48,21 @@ export function useMoveMutation(dataset: DatasetId) {
       // A refetch in flight would overwrite the optimistic tree with stale data.
       await queryClient.cancelQueries({ queryKey })
       const previous = queryClient.getQueryData<Tree>(queryKey)
-      const node = previous?.nodes[id]
-      if (previous && node) queryClient.setQueryData<Tree>(queryKey, moveNode(previous, id, target))
+      // moveNode throws on a move that breaks a rule: the mutation then fails before reaching the server.
+      if (previous) queryClient.setQueryData<Tree>(queryKey, moveNode(previous, id, target))
       return {
         previous,
-        name: node?.name ?? 'Item',
-        from: node?.parentId ?? null,
-        targetName: folderName(previous, target),
+        name: getDisplayName(previous, id),
+        from: previous?.nodes[id]?.parentId ?? null,
+        targetName: getDisplayName(previous, target),
       }
     },
 
-    onError: (error, _variables, context) => {
+    onError: (error, { id }, context) => {
+      // Without a context, onMutate itself failed and nothing was changed.
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous)
-      toast.error(`Couldn't move “${context?.name ?? 'item'}”`, { description: error.message })
+      const name = context?.name ?? getDisplayName(queryClient.getQueryData<Tree>(queryKey), id)
+      toast.error(`Couldn't move “${name}”`, { description: error.message })
     },
 
     onSuccess: (_data, { id, isUndo }, context) => {

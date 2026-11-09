@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { findItem, getActiveItem, getDetails, getItem, queryItem, renderApp } from '@/test/render'
 import { ApiError, createMockApi } from '../api/mock-api'
 
@@ -71,6 +71,14 @@ describe('Move to picker', () => {
     await user.click(getDetails().getByRole('button', { name: 'Move' }))
     expect(await screen.findByText('Moved “Kickoff notes.md” to Drafts')).toBeInTheDocument()
     expect(getDetails().getByRole('navigation', { name: 'Location' })).toHaveTextContent('Drafts')
+  })
+
+  it('does nothing until a folder is chosen', async () => {
+    const { user } = await renderLoaded()
+    await user.click(getItem('Welcome.md'))
+    fireEvent.submit(getDetails().getByRole('combobox', { name: 'Move to' }).closest('form')!)
+    expect(screen.queryByText(/Moved/)).not.toBeInTheDocument()
+    expectAtRoot('Welcome.md')
   })
 
   it('can move to the root of the drive', async () => {
@@ -162,7 +170,15 @@ describe('drag and drop', () => {
     fireEvent.dragOver(getItem('Clients'), { dataTransfer: data })
     expect(screen.queryByText(/Can't move here/)).not.toBeInTheDocument()
 
+    // Moving between rows keeps the hint; leaving the tree clears it.
+    fireEvent.dragOver(getItem('Acme Corp'), { dataTransfer: data })
+    // jsdom has no DragEvent, so fireEvent would drop relatedTarget: set it on the event itself.
+    const leave = createEvent.dragLeave(screen.getByRole('tree'))
+    Object.defineProperty(leave, 'relatedTarget', { value: getItem('Northwind') })
+    fireEvent(screen.getByRole('tree'), leave)
+    expect(screen.getByText(/Can't move here/)).toBeInTheDocument()
     fireEvent.dragLeave(screen.getByRole('tree'), { relatedTarget: document.body })
+    expect(screen.queryByText(/Can't move here/)).not.toBeInTheDocument()
     fireEvent.drop(getItem('Acme Corp'), { dataTransfer: data })
     fireEvent.dragEnd(getItem('Clients'), { dataTransfer: data })
     expect(getItem('Clients')).toHaveAttribute('aria-level', '1')

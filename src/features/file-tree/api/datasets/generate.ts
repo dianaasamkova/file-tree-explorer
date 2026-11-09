@@ -47,6 +47,7 @@ const fileTypes = [
 const BASE_DATE = Date.UTC(2026, 10, 1)
 const DAY = 86_400_000
 const MAX_DEPTH = 5
+const TOP_LEVEL_FOLDERS = 12
 
 /**
  * A deterministic drive with exactly `total` items, used to show that rendering stays fast with
@@ -68,15 +69,18 @@ export function generateDataset(total = 10_000, seed = 2026): ApiTreeResponse {
   }
 
   while (count < total) {
-    // The first items are top-level folders, so the drive has a recognizable shape.
-    const parent = count < 12 ? folders[0]! : random.pick(folders)
+    // The first items are top-level folders with distinct names, so the drive has a recognizable shape.
+    const topLevel = count < TOP_LEVEL_FOLDERS
+    const parent = topLevel ? folders[0]! : random.pick(folders)
     const siblings = parent.node ? parent.node.children : items
-    const makeFolder = count < 12 || (parent.depth < MAX_DEPTH && random.next() < 0.15)
+    // After those, new folders only go inside folders, so the root keeps its twelve.
+    const makeFolder = topLevel || (parent.node !== null && parent.depth < MAX_DEPTH && random.next() < 0.15)
+    const folderName = topLevel ? folderNames[count]! : random.pick(folderNames)
     count += 1
     const id = `g${count}`
 
     if (makeFolder) {
-      const name = uniqueName(parent.names, random.pick(folderNames))
+      const name = uniqueName(parent.names, folderName)
       const folder: ApiFolder = { id, name, type: 'folder', children: [] }
       siblings.push(folder)
       folders.push({ node: folder, depth: parent.depth + 1, names: new Set() })

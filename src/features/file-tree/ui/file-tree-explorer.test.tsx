@@ -35,6 +35,46 @@ describe('loading', () => {
     await user.click(within(alert).getByRole('button', { name: 'Retry' }))
     expect(await findItem('Clients')).toBeInTheDocument()
   })
+
+  it('shows the skeleton again while retrying', async () => {
+    const api = createMockApi()
+    let finish: () => void = () => {}
+    api.getTree = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(503, 'The server is unavailable.'))
+      .mockReturnValueOnce(new Promise((resolve) => (finish = () => resolve({ items: [] }))))
+    const { user } = renderApp({ api })
+
+    await user.click(await screen.findByRole('button', { name: 'Retry' }))
+    expect(await screen.findByText('Loading files…')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    finish()
+    expect(await screen.findByText('This drive is empty')).toBeInTheDocument()
+  })
+
+  it('keeps the tree when a background refresh fails', async () => {
+    const api = createMockApi()
+    const { user } = renderApp({ api })
+    await findItem('Clients')
+    // Every move refreshes the tree afterwards; make that refresh fail.
+    api.getTree = vi.fn().mockRejectedValue(new ApiError(503, 'The server is unavailable.'))
+
+    await user.click(getItem('Welcome.md'))
+    await user.selectOptions(getDetails().getByRole('combobox', { name: 'Move to' }), 'drafts')
+    await user.click(getDetails().getByRole('button', { name: 'Move' }))
+
+    await waitFor(() => expect(api.getTree).toHaveBeenCalled())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(getItem('Welcome.md')).toHaveAttribute('aria-level', '2')
+  })
+
+  it('says when the drive is empty', async () => {
+    const api = createMockApi()
+    api.getTree = vi.fn().mockResolvedValue({ items: [] })
+    renderApp({ api })
+    expect(await screen.findByText('This drive is empty')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('0 items')
+  })
 })
 
 describe('keyboard', () => {
@@ -70,6 +110,10 @@ describe('keyboard', () => {
     expect(getActiveItem()).toBe(getItem('Archive'))
     await user.keyboard('{ArrowUp}')
     expect(getActiveItem()).toBe(getItem('Archive'))
+
+    // Shortcuts with Alt belong to the browser and the OS.
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}')
+    expect(getActiveItem()).toBe(getItem('Archive'))
   })
 
   it('selects with Enter and Space, expands siblings with *, and jumps by typing', async () => {
@@ -90,6 +134,8 @@ describe('keyboard', () => {
     expect(getItem('Acme Corp')).toHaveAttribute('aria-expanded', 'true')
 
     await user.keyboard('te')
+    expect(getActiveItem()).toBe(getItem('Team'))
+    await user.keyboard('q')
     expect(getActiveItem()).toBe(getItem('Team'))
     await user.keyboard('{Escape}')
     expect(getActiveItem()).toBe(getItem('Team'))
