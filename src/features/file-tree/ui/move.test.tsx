@@ -195,6 +195,48 @@ describe('drag and drop', () => {
     fireEvent.dragEnd(getItem('Welcome.md'), { dataTransfer: data })
   })
 
+  it('scrolls the tree while an item is held near its top or bottom edge', async () => {
+    await renderLoaded()
+    const tree = screen.getByRole('tree')
+    // jsdom doesn't scroll: record what the tree asks for.
+    let scrollTop = 0
+    Object.defineProperty(tree, 'scrollTop', { get: () => scrollTop, set: (value: number) => (scrollTop = value) })
+    const dragOverAt = (target: Element, clientY: number) => {
+      const event = createEvent.dragOver(target, { dataTransfer: dataTransfer() })
+      Object.defineProperty(event, 'clientY', { value: clientY })
+      fireEvent(target, event)
+    }
+    // The tree's box is 0–640 px tall in the test setup.
+    dragOverAt(getItem('Team'), 630)
+    expect(scrollTop).toBe(0)
+
+    fireEvent.dragStart(getItem('Welcome.md'), { dataTransfer: dataTransfer() })
+    dragOverAt(getItem('Team'), 630)
+    dragOverAt(getItem('Team'), 635)
+    await waitFor(() => expect(scrollTop).toBeGreaterThan(20))
+
+    // Back in the middle: scrolling stops.
+    dragOverAt(getItem('Team'), 320)
+    const stoppedAt = scrollTop
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(scrollTop).toBe(stoppedAt)
+
+    // Near the top it scrolls up; leaving the tree stops it.
+    dragOverAt(getItem('Clients'), 5)
+    await waitFor(() => expect(scrollTop).toBeLessThan(stoppedAt))
+    fireEvent.dragLeave(tree, { relatedTarget: document.body })
+    const leftAt = scrollTop
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(scrollTop).toBe(leftAt)
+
+    // Ending the drag stops a running scroll too.
+    dragOverAt(getItem('Team'), 640)
+    fireEvent.dragEnd(getItem('Welcome.md'), { dataTransfer: dataTransfer() })
+    const endedAt = scrollTop
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(scrollTop).toBe(endedAt)
+  })
+
   it('ignores drag events that did not start in the tree', async () => {
     await renderLoaded()
     expect(fireEvent.dragOver(getItem('Drafts'), { dataTransfer: dataTransfer() })).toBe(true)

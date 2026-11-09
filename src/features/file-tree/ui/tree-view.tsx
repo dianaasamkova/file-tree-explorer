@@ -18,6 +18,7 @@ import type { FolderTarget, NodeId, Tree } from '../model/types'
 import type { VisibleRow } from '../model/visible'
 import { FileIcon } from './file-icon'
 import { Highlight } from './highlight'
+import { useDragAutoScroll } from './use-drag-auto-scroll'
 
 const ROW_HEIGHT = 32
 const INDENT = 20
@@ -89,6 +90,7 @@ export function TreeView({
   const [dragId, setDragId] = useState<NodeId | null>(null)
   const [drop, setDrop] = useState<DropState | null>(null)
   const expandTimer = useRef<{ id: NodeId; timer: ReturnType<typeof setTimeout> } | null>(null)
+  const autoScroll = useDragAutoScroll(scrollRef)
 
   useImperativeHandle(ref, () => ({ focus: () => scrollRef.current?.focus() }), [])
 
@@ -213,6 +215,7 @@ export function TreeView({
   // Drag and drop. Every drop also has a keyboard path (Ctrl+X / Ctrl+V) and a single-pointer
   // path (the "Move to" picker), as WCAG 2.5.7 asks.
   const clearDrag = () => {
+    autoScroll.stop()
     clearTimeout(expandTimer.current?.timer)
     expandTimer.current = null
     setDragId(null)
@@ -273,9 +276,13 @@ export function TreeView({
           pointerDown.current = false
         }}
         onBlur={() => setHasFocus(false)}
+        // Capture phase: rows stop the bubbling dragover, but the tree scrolls whichever row is under the pointer.
+        onDragOverCapture={(event) => dragId !== null && autoScroll.update(event.clientY)}
         onDragOver={(event) => updateDrop(event, null, null)}
         onDragLeave={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDrop(null)
+          if (event.currentTarget.contains(event.relatedTarget as Node | null)) return
+          autoScroll.stop()
+          setDrop(null)
         }}
         onDrop={handleDrop}
       >

@@ -213,19 +213,58 @@ Images show a thumbnail and Markdown files a rendered preview in the details pan
 
 The mock server saves its state to IndexedDB; a "Reset demo" button restores the sample data.
 
+### F11. Cancel and undo everywhere — M
+
+**Story:** As someone who just did the wrong thing, I can take it back however I did it.
+
+Feedback from testing: there is no visible way to cancel an action. Today only a finished move can be undone (the toast's Undo button), and only until the toast disappears. A cut can be cancelled with Esc, but nothing on screen says so.
+
+- **Undo history:** Ctrl/⌘+Z undoes the last move, rename or delete, and Ctrl/⌘+Shift+Z redoes it, for the last 20 actions in this session. Undo works after the toast has gone. Each undo is a normal optimistic action, so it can also fail and roll back with a reason.
+- **Cancel a cut:** the status bar message about a cut item gets a Cancel button next to "Esc".
+- **Cancel a drag:** while dragging, a hint at the bottom of the tree says "Esc to cancel"; dropping outside the tree also cancels.
+- **Cancel a move in flight:** while the server hasn't answered, the toast shows "Moving…" with Cancel. Cancel aborts the request (`AbortSignal`) and rolls back. If the server already finished, Cancel becomes Undo.
+- **Cancel long work:** loading a big folder, a server search and preparing the 1,000,000-item drive each have a Cancel or stop when the user leaves (collapsing the folder, clearing the search, switching drive).
+- **Confirm before destructive actions only:** emptying the Trash asks first. Moves and deletes don't; Undo covers them.
+
+### F12. Clearer drag and drop — S
+
+**Story:** As someone dragging an item, I know exactly where it will land before I let go.
+
+Feedback from testing: it isn't clear whether dropping reorders items or moves them into a folder. Items are always sorted (folders first, then by name), so a drop always moves the item _into_ a folder; the UI needs to say that.
+
+- **Name the target** in a label beside the pointer: "Move into Drafts", "Move to Drive", or the reason it can't go there.
+- **Highlight the whole target folder:** its row and the block of its children, so dropping on a file clearly means "into this file's folder".
+- **A drag image** with the item's icon and name, and a count when several are dragged (F6).
+- **Scroll while dragging** near the top or bottom edge of the tree. _(Done in v1 after testing: browsers don't scroll a panel during a drag on their own.)_
+- **Show where it landed:** after the drop, the moved item is scrolled into view, selected and briefly highlighted inside its new folder.
+
+### F13. Custom order (optional) — M
+
+**Story:** As someone who arranges a project folder by hand, I can put items in my own order.
+
+Drives such as Google Drive and Finder only sort; manual order is what tools like Notion do. If we add it:
+
+- A per-folder sort switch: Name (default), Size, Modified, or **Custom**.
+- In Custom order, dragging shows a line between rows ("Move here") as well as the "into folder" highlight; the top and bottom quarter of a row mean "before" and "after", the middle means "into".
+- The keyboard alternative: Alt+↑ and Alt+↓ move the focused item up and down; the action menu has "Move up" and "Move down".
+- **Fractional ordering:** an item moved between two others gets an order value between theirs, so a reorder writes one item, not all its siblings. Siblings are renumbered only when the gap gets too small.
+- New users still see sorted folders; Custom is opt-in per folder and kept by the server.
+
 ## 6. Plan
 
-| Phase | Content                                                                                | Effort   |
-| ----- | -------------------------------------------------------------------------------------- | -------- |
-| P0    | Performance panel, CI budgets, fixes 4.2 a–f, virtualized "Move to", corrected TECH.md | 2–3 days |
-| P1    | Worker server, lazy folders, infinite pages, server search, 1M drive (F1)              | 4–6 days |
-| P2    | List view and filters (F2, F3)                                                         | 4–5 days |
-| P3    | Storage insights (F4), optional minimap (F5)                                           | 2–3 days |
-| P4    | Multi-select and bulk moves (F6)                                                       | 2–3 days |
-| P5    | Live updates (F7)                                                                      | 2 days   |
-| P6    | Rename, new folder, Trash, preview, persistence (F8–F10)                               | 3–4 days |
+| Phase | Content                                                                                                             | Effort   |
+| ----- | ------------------------------------------------------------------------------------------------------------------- | -------- |
+| P0    | Performance panel, CI budgets, fixes 4.2 a–f, virtualized "Move to", corrected TECH.md, clearer drag and drop (F12) | 3–4 days |
+| P1    | Worker server, lazy folders, infinite pages, server search, 1M drive (F1)                                           | 4–6 days |
+| P2    | List view and filters (F2, F3)                                                                                      | 4–5 days |
+| P3    | Storage insights (F4), optional minimap (F5)                                                                        | 2–3 days |
+| P4    | Multi-select and bulk moves (F6)                                                                                    | 2–3 days |
+| P5    | Live updates (F7)                                                                                                   | 2 days   |
+| P6    | Rename, new folder, Trash, preview, persistence (F8–F10)                                                            | 3–4 days |
+| P7    | Cancel and undo everywhere (F11)                                                                                    | 2–3 days |
+| P8    | Custom order (F13), optional                                                                                        | 2–3 days |
 
-**Recommended for the portfolio: P0 to P3.** They show measured performance work, a large dataset, and data visualization. P4 to P6 add product completeness and can follow later.
+**Recommended for the portfolio: P0 to P3, plus F12 (clearer drag and drop) inside P0.** They show measured performance work, a large dataset, and data visualization, and fix the main usability issue found in testing. P4 to P8 add product completeness and can follow later.
 
 Every phase keeps: tests at the agreed coverage level, axe clean in both themes, keyboard parity, and a TECH.md update with numbers.
 
@@ -245,3 +284,4 @@ Every phase keeps: tests at the agreed coverage level, axe clean in both themes,
 3. Keep the 100% coverage threshold, or 95% so tests stay about behavior?
 4. Where does v2 go: the current PR, or a new PR after the rebuild is merged? A separate PR keeps the rebuild reviewable.
 5. Deploy to GitHub Pages now (v1), or after P0?
+6. Custom order (F13): build it, or keep items always sorted, as file managers do?

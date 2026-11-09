@@ -14,13 +14,13 @@ A file manager's tree done properly: browse a drive with the keyboard or the mou
 ## Highlights
 
 - **Accessible tree, built from scratch.** WAI-ARIA `tree` with one tab stop and `aria-activedescendant`, full keyboard support (arrows, Home/End, Page Up/Down, `*`, typeahead), a skip link, visible focus, and no axe violations in light and dark mode.
-- **Three ways to move every item.** Native drag and drop (with auto-expand on hover and a reason when a drop isn't allowed), <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>X</kbd> and <kbd>V</kbd>, and a "Move to" picker. Dragging always has a keyboard and a single-pointer alternative (WCAG 2.2, 2.5.7).
+- **Three ways to move every item.** Native drag and drop (folders open when you hover them, the tree scrolls when you hold an item near its edge, and a refused drop says why), <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>X</kbd> and <kbd>V</kbd>, and a "Move to" picker. Dragging always has a keyboard and a single-pointer alternative (WCAG 2.2, 2.5.7).
 - **Optimistic updates with rollback.** The tree changes at once; if the server refuses (try moving into "Archive (read-only)"), it rolls back and says why. Every move can be undone from the toast.
 - **Search that keeps context.** Matches are highlighted, their folders open automatically, and a matching folder keeps its content. Clearing the search brings back the folders you had open. The count is announced to screen readers.
 - **10,000 items, about 30 rows in the DOM.** The tree is flattened and virtualized; search runs at a lower priority with `useDeferredValue`, so typing stays responsive.
 - **Shareable state.** The search, selected file and drive live in the URL (`?q=…&file=…&dataset=large`).
 - **Light and dark themes designed together**, following the system setting until you choose, with no flash on load.
-- **Tested:** 136 unit and component tests at 100% coverage of statements, branches, functions and lines (enforced in CI) and a Playwright suite for keyboard use, drag and drop, the 10,000-item drive and accessibility.
+- **Tested:** 141 unit and component tests at 100% coverage of statements, branches, functions and lines (enforced in CI) and a Playwright suite for keyboard use, drag and drop, the 10,000-item drive and accessibility.
 
 ## Tech stack
 

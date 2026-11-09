@@ -23,7 +23,7 @@ export function App() {
   }
 
   return (
-    <div className="flex min-h-full flex-col md:h-full">
+    <div className="bg-background text-foreground flex min-h-full flex-col font-sans antialiased md:h-full">
       <a
         href={`#${TREE_ID}`}
         className="bg-accent text-accent-foreground sr-only z-50 rounded-md px-3 py-2 text-sm font-medium focus:not-sr-only focus:absolute focus:top-2 focus:left-2"
