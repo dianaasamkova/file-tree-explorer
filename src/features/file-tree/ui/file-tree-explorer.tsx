@@ -82,7 +82,6 @@ export function FileTreeExplorer({ dataset }: { dataset: DatasetId }) {
 
   const reveal = (id: NodeId) => {
     if (!tree) return
-    if (search && !search.visibleIds.has(id)) changeQuery('')
     dispatch({ type: 'reveal', id, ancestorIds: getAncestorIds(tree, id) })
     treeRef.current?.focus()
   }

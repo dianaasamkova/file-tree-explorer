@@ -30,7 +30,6 @@ export type ExplorerAction =
   | { type: 'select'; id: NodeId | null }
   | { type: 'cut'; id: NodeId | null }
   | { type: 'searchChanged' }
-  | { type: 'reset'; selectedId?: NodeId | null }
 
 const emptySearch: ExplorerState['search'] = { expandedIds: new Set(), collapsedIds: new Set() }
 
@@ -81,8 +80,6 @@ export function explorerReducer(state: ExplorerState, action: ExplorerAction): E
       return { ...state, cutId: action.id }
     case 'searchChanged':
       return state.search === emptySearch ? state : { ...state, search: emptySearch }
-    case 'reset':
-      return createInitialState(action.selectedId ?? null)
   }
 }
 

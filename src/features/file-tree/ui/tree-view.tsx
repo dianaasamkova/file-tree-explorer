@@ -188,7 +188,8 @@ export function TreeView({
       onCut(null)
       return true
     }
-    if (key.length === 1 && key.trim()) {
+    // "/" is left to the page: it focuses the search.
+    if (key.length === 1 && key.trim() && key !== '/') {
       // Typeahead: typing a name's first letters jumps to the next matching item.
       const recent = event.timeStamp - typeahead.current.time < TYPEAHEAD_RESET
       const text = (recent ? typeahead.current.text : '') + key.toLocaleLowerCase()
