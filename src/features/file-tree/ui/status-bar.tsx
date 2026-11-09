@@ -1,5 +1,6 @@
 import { Scissors } from 'lucide-react'
 import { Kbd } from '@/components/ui/kbd'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { MOD_KEY } from '@/lib/platform'
 import { pluralize } from '../model/format'
 import type { TreeNode } from '../model/types'
@@ -11,16 +12,27 @@ export interface StatusBarProps {
   cutNode: TreeNode | undefined
 }
 
+/** How long typing must pause before a new count is announced to screen readers. */
+export const ANNOUNCE_DELAY = 500
+
 export function StatusBar({ total, matches, query, cutNode }: StatusBarProps) {
+  const summary =
+    total === null
+      ? 'Loading…'
+      : matches === null
+        ? pluralize(total, 'item')
+        : `${pluralize(matches, 'match', 'matches')} for “${query.trim()}” in ${pluralize(total, 'item')}`
+  // The count on screen follows every keystroke. Screen readers get it once typing pauses,
+  // instead of one announcement per letter.
+  const announcement = useDebouncedValue(summary, ANNOUNCE_DELAY)
+
   return (
     <footer className="border-border bg-surface text-muted flex min-h-9 flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t px-4 py-1.5 text-xs">
-      {/* Announced to screen readers whenever the count changes. */}
-      <p role="status" aria-live="polite" className="tabular-nums">
-        {total === null
-          ? 'Loading…'
-          : matches === null
-            ? pluralize(total, 'item')
-            : `${pluralize(matches, 'match', 'matches')} for “${query.trim()}” in ${pluralize(total, 'item')}`}
+      <p aria-hidden className="tabular-nums">
+        {summary}
+      </p>
+      <p role="status" className="sr-only">
+        {announcement}
       </p>
       {cutNode ? (
         <p className="text-foreground flex items-center gap-1.5">
