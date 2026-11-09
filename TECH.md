@@ -2,69 +2,120 @@
 
 ## 1. Problem
 
-Show a user's files as a nested folder tree and let them find a file fast, even when it sits several levels deep.
+People keep work in nested folders and need to find a file fast and put things where they belong. The 2024 version of this project only searched; this one is a complete feature a product team could ship.
 
 **Acceptance criteria**
 
-- Folders and files render as an expandable tree, with any depth of nesting.
-- Typing in search filters the tree by name, case-insensitively.
-- A matching file is shown together with the folders that contain it.
-- Results are expanded, so matches are visible without clicking.
-- When nothing matches, the user sees "Nothing found".
+- Folders and files render as a tree with any depth, folders first, names in natural order ("v2" before "v10").
+- Search filters by name, case-insensitively. Each match is shown with the folders that contain it, highlighted, and its folders are open. A matching folder keeps all its content. Clearing the search restores the folders the user had open.
+- Any item can be moved into another folder or to the root by drag and drop, by keyboard (cut and paste), and with a single pointer (a "Move to" picker). Invalid moves are refused with a reason: into itself, into its own subfolder, into its current folder, or next to an item with the same name.
+- A move shows at once. If the server refuses, the tree goes back and the user is told why. A successful move can be undone.
+- Selecting an item shows its type, size, date, location and, for a folder, totals of what it contains.
+- It works with the keyboard alone and with a screen reader, in light and dark mode, and on a phone.
+- It stays responsive with 10,000 items.
+- Loading, empty, no-results and error states each tell the user what to do next.
 
 ## 2. Architecture
 
 ```mermaid
 flowchart LR
-  JSON[response.json<br/>mock backend] --> TV[TreeView<br/>state + effects]
-  Input[Search input] -->|every keystroke| TV
-  TV -->|debounced query| SF[searchFolders<br/>pure]
-  SF --> BT[buildTree<br/>pure → TreeItem JSX]
-  BT --> MUI[MUI X SimpleTreeView]
-  TV -->|all ids| EXP[expandedItems]
+  subgraph Server["Mock backend (in-browser)"]
+    DS[(Datasets<br/>sample · 10k generated)] --> API[FileTreeApi<br/>getTree · moveNode<br/>re-checks rules, read-only folder]
+  end
+
+  subgraph Client
+    API -->|nested JSON| Q[TanStack Query<br/>normalizeTree once]
+    Q -->|Tree| E[FileTreeExplorer]
+    URL[URL<br/>?q ?file ?dataset] <--> E
+    R[useReducer<br/>expanded · selected · focused · cut] <--> E
+    E -->|useDeferredValue| S[searchTree<br/>pure]
+    S --> V[getVisibleRows<br/>pure, flat]
+    V --> T[TreeView<br/>virtualized ARIA tree]
+    E --> D[DetailsPanel<br/>Move to]
+    T & D -->|move| M[useMoveMutation<br/>optimistic · rollback · Undo]
+    M --> API
+    M -.->|setQueryData| Q
+  end
 ```
 
-- **`TreeView`** owns the state: raw folders, input value, debounced query, and the expanded and selected item ids.
-- **`handlers.tsx`** holds the logic as pure functions: filter the tree, collect ids, map data to `TreeItem` elements. They're easy to unit-test and to move to a worker or the backend later.
-- **`SimpleTreeView`** (MUI X) is used in controlled mode, so search can drive expansion.
-
-## 3. Key decisions
-
-| Decision                              | Why                                                                  | Trade-off                                                 |
-| ------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------- |
-| MUI X `SimpleTreeView`                | Keyboard navigation, ARIA tree roles and multi-select out of the box | Renders every node; there's no built-in virtualisation    |
-| Filter on the client                  | The dataset is small and comes in one response                       | Doesn't scale to large drives (see Roadmap)               |
-| Keep ancestors of matches             | A file name alone is ambiguous; the path gives context               | The visible tree can still be large for common queries    |
-| Matching folder keeps all its content | The user searched for the folder, so they want what's inside         | Its children aren't narrowed further                      |
-| Two states: `inputValue` and `search` | The input stays responsive; only the expensive filter is debounced   | Two sources of truth to keep in sync                      |
-| Expand everything while searching     | Matches are never hidden in a collapsed branch                       | It also expands non-matching branches of matching folders |
-| `memo` on the filtered tree           | Avoids re-filtering on selection or expansion changes                | —                                                         |
+- **`model/`** is plain TypeScript with no React: normalizing the API response, move rules, search and the flattening of the tree into rows. It's where the logic lives and where most tests are.
+- **`api/`** holds the backend contract (`FileTreeApi`), an in-memory implementation, and the Query hooks. The UI gets the client through context, so tests and the demo inject their own.
+- **`state/`** is one typed reducer for UI state.
+- **`ui/`** components take data and callbacks; `FileTreeExplorer` is the only one that wires state together.
 
 ### Data model
 
-The mock response mixes folders and files in one `children` array. For a real backend, I'd store folders and files in separate tables (an adjacency list with `parent_id`, or a materialized path for fast subtree queries) and have the API return one level at a time.
+The backend sends a nested tree, as most file APIs do. The client normalizes it once into `{ rootIds, nodes }`: a flat map by id, with each folder holding sorted `childIds` and each node its `parentId`. Moves, ancestor lookups and path building are then O(1) or O(depth), and an immutable move only copies the three objects it touches. The root has no node of its own; a move target is `FolderTarget = id | null`.
 
-## 4. Quality
+To render, `getVisibleRows` walks the tree once into a flat list of the rows on screen, with the ARIA level, position and set size each row needs. A flat list is what makes virtualization possible.
 
-- **Tests:** unit tests for `searchFolders` (file match, folder match, case-insensitivity, no match) and `getFoldersAndFilesIds`; a smoke test for `App`.
-- **CI:** GitHub Actions runs install, tests and a production build on every push and pull request.
-- **Accessibility:** MUI X Tree View provides `role="tree"` / `treeitem`, arrow-key navigation and `aria-expanded`. The search input has an `aria-label`.
+## 3. Key decisions
 
-## 5. Looking back (2026)
+| Decision                                                              | Why                                                                                                                                                                                                                        | Trade-off                                                                                                                            |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **No global store** (no Redux or Zustand)                             | The state splits cleanly by kind: server data in TanStack Query, UI state local to one screen in a reducer, shareable state in the URL. Nothing else reads it, so a store would add indirection without solving a problem. | If several screens need the selection later, the reducer moves into context; it's already one typed unit.                            |
+| TanStack Query for the tree                                           | Caching per dataset, loading and error states, cancelation, and a standard pattern for optimistic updates with rollback.                                                                                                   | One more dependency (10.6 KB gzipped).                                                                                               |
+| Optimistic moves, rollback, Undo in the toast                         | Moving should feel instant. Rollback keeps the UI honest when the server says no; Undo makes a mistaken drop cheap.                                                                                                        | Two quick moves where the first fails roll back to the first one's snapshot; the refetch after every move puts the tree right again. |
+| Server re-checks every rule and owns one rule the client doesn't know | Client checks are only for fast feedback. The read-only "Archive" folder makes rollback visible in the demo.                                                                                                               | —                                                                                                                                    |
+| Search-mode expansion kept apart from the user's own                  | Search opens many folders; dropping that on clear brings back exactly what the user had open.                                                                                                                              | Two sets of expansion state in the reducer.                                                                                          |
+| `useDeferredValue` instead of a debounce                              | Input never lags and results show as soon as React has time, with no fixed delay.                                                                                                                                          | Filtering still runs on every keystroke, at low priority; it's 70 ms for 10,000 items.                                               |
+| Own tree instead of a tree library                                    | Full control over ARIA, keyboard, drag and drop and virtualization, which tree libraries rarely combine; and a much smaller bundle than MUI X Tree View.                                                                   | More code to own and test (about 300 lines for the tree).                                                                            |
+| `aria-activedescendant` with a flat, virtualized list                 | One tab stop, and it works when the focused row isn't in the DOM yet.                                                                                                                                                      | The focused row has to be scrolled into view so it exists; done on every focus change.                                               |
+| Native HTML5 drag and drop                                            | No dependency; the browser handles the drag image and cursor.                                                                                                                                                              | No touch support; on touch the picker and cut and paste are the way to move.                                                         |
+| Tailwind 4 + shadcn/ui-style components written by hand               | Semantic tokens for light and dark, and only the few primitives this screen needs.                                                                                                                                         | Hand-written rather than generated, so there's no CLI to update them.                                                                |
+| Natural sort with `Intl.Collator`                                     | "Invoice 2" before "Invoice 10", case-insensitive, as file managers do.                                                                                                                                                    | —                                                                                                                                    |
+| URL as the share format                                               | A search or a selected file can be sent as a link; `replaceState` keeps typing out of the history.                                                                                                                         | Only `q`, `file` and `dataset` are kept; expansion isn't.                                                                            |
 
-What I'd do differently today:
+## 4. Accessibility
 
-- **Fixed in 2026:** a folder that matched by name lost all its children, because they were filtered against the same query. It now keeps its content, and there's a test for it.
-- **Empty folders look like files.** `children: []` is treated as a leaf, so there's no folder icon or expand affordance. I'd use the `type` field and render icons per type.
-- **Collapse state after search.** Clearing the search leaves everything expanded. I'd snapshot `expandedItems` before the search and restore it after.
-- **Debounce of 1000 ms** feels slow; 200–300 ms is closer to "instant". I'd also move the query to the URL, so a search is shareable.
-- **Highlight the match** inside each label, so the user sees why an item is there.
-- **Tooling:** today I'd use Vite and Vitest instead of Create React App, which is deprecated.
+- **Pattern:** WAI-ARIA tree view with a flat list of `treeitem`s carrying `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded` and `aria-selected`. The tree is one tab stop; arrows move `aria-activedescendant`.
+- **Keyboard:** ↑ ↓, Home, End, Page Up and Down; → opens a folder or goes to its first child; ← closes it or goes to the parent; Enter selects and toggles a folder; Space selects; `*` opens all sibling folders; typing jumps to a matching name; <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>X</kbd> and <kbd>V</kbd> cut and paste; Esc cancels a cut; `/` focuses the search.
+- **Dragging has alternatives** (WCAG 2.2, 2.5.7): cut and paste for the keyboard, the "Move to" picker for a single pointer. Folders the item can't go to are disabled in the picker.
+- **Announcements:** the status bar is a polite live region for item and match counts; toasts announce moves and errors; the error state is an `alert`.
+- **Visuals:** text contrast is at least 4.5:1 and icons and focus rings at least 3:1 in both themes; focus is always visible; rows are 32 px high and the chevron's target is 24 px; motion is limited to small transitions and turned off with `prefers-reduced-motion`.
+- **Checked by** axe in Playwright (WCAG 2.0, 2.1 and 2.2 A and AA rules) in light and dark mode, plus manual keyboard testing.
 
-## 6. Roadmap
+## 5. Testing strategy
 
-1. **Scale:** virtualised rendering (e.g. `react-window`) and lazy loading of folder children per level.
-2. **Server-side search** with pagination once the tree no longer fits in one response.
-3. **File details:** size, type icon and a preview panel on selection.
-4. **Actions:** rename, move by drag and drop, delete, with optimistic updates.
-5. **Keyboard search:** `/` focuses search, `Esc` clears it.
+| Layer      | Tool                                  | What                                                                                                                                                                                                                                              | Count |
+| ---------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| Unit       | Vitest                                | Normalizing, sorting, move rules, search, row flattening, formatting, the dataset generator, the mock server, the reducer                                                                                                                         | 82    |
+| Component  | Vitest + Testing Library + user-event | The whole app against the in-memory server with no latency: keyboard, typeahead, search, details, Move to, cut and paste, drag and drop with a `dataTransfer` mock, optimistic rollback with a controlled promise, Undo, URL, theme, drive switch | 34    |
+| End to end | Playwright                            | Production build in Chromium: keyboard-only flow from the skip link, real drag and drop with rollback, scrolling 10,000 items, axe in both themes                                                                                                 | 5     |
+
+Coverage is enforced in CI at 90% statements and lines, 85% branches and 90% functions; it is currently 98.8% statements, 93.9% branches and 100% functions. Component tests use the real sample drive, so they read like the product ("drag Welcome.md onto Drafts") rather than like fixtures. jsdom has no layout, so the setup file gives elements a size and mocks `ResizeObserver` for TanStack Virtual.
+
+## 6. Bundle size
+
+Production build, JavaScript, gzipped. The 2024 numbers are from the last Create React App build.
+
+|                         |                        2024: CRA + MUI |                                                     2026: Vite + Tailwind |
+| ----------------------- | -------------------------------------: | ------------------------------------------------------------------------: |
+| Total JS                |                 **88 KB** (271 KB raw) |                                                   **123 KB** (395 KB raw) |
+| UI library              | ~45 KB (MUI, Emotion, MUI X Tree View) | ~22 KB (sonner 9.4, tailwind-merge 8.6, lucide icons 3.2, cva + clsx 0.6) |
+| Tree                    |                           inside MUI X |                                                                  own code |
+| React                   |       React 18 + app: the other ~43 KB |                                               React 19 (react-dom): 68 KB |
+| Data and virtualization |                                      — |                                TanStack Query 10.6, TanStack Virtual 10.1 |
+| App code                |                 inside the 43 KB above |                                                                   13.3 KB |
+| CSS                     |                    Emotion, at runtime |                                                            5.8 KB, static |
+
+To be honest about it: the bundle grew by 35 KB. The UI layer halved (45 → 22 KB) even though the app does far more, but React 19's react-dom alone is 68 KB, and caching, optimistic updates and virtualization add 21 KB of real features. The cheapest further cuts would be dropping `tailwind-merge` (8.6 KB) for plain `clsx`, and lazy-loading the toast library.
+
+## 7. Looking back
+
+What the 2024 version taught me, and what changed:
+
+- **The bug that started the rewrite:** a folder that matched by name lost its children, because they were filtered by the same query. Search is now a pure function with a test for that case.
+- **Empty folders looked like files** because `children: []` was treated as a leaf. Nodes now carry their `type`, and an empty "Drafts" folder is in the sample data on purpose.
+- **Clearing a search left everything expanded.** Search expansion is now separate state, dropped on clear.
+- **A 1000 ms debounce felt slow.** `useDeferredValue` removes the fixed delay.
+- **MUI X rendered every node.** A flat row model plus virtualization keeps the DOM at about 30 rows for any size.
+- **What I'd still change:** drag and drop has no touch support (the picker covers it), the URL doesn't keep expanded folders, and two fast moves where the first fails rely on the refetch to settle.
+
+## 8. Roadmap
+
+1. **Lazy loading per folder** with `useInfiniteQuery`, so a drive doesn't have to arrive in one response; search moves to the server.
+2. **Multi-select** (Shift and Ctrl click, Shift+arrows) and moving several items at once.
+3. **Rename, create and delete**, with the same optimistic pattern and Undo.
+4. **Touch drag and drop** through pointer events, keeping native DnD for desktop.
+5. **Move the read-only rule into the client's knowledge** once the API exposes permissions, so invalid drops are refused before they're tried.
