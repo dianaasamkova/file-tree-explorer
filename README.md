@@ -61,16 +61,29 @@ Before the first e2e run: `npx playwright install chromium`.
 ## Project structure
 
 ```
-apps/
-└── web/                       # The demo: shell (header, theme, drive switch), design system page, e2e tests
+apps/web/                      # The demo app
+├── src/components/            # App shell: header with drive switch, theme and page link
+├── src/pages/                 # Design system page (#design-system)
+└── e2e/                       # Playwright: keyboard, drag and drop, large drive, accessibility
 packages/
-├── ui/                        # @fte/ui: design tokens and primitives (Button, Kbd, Skeleton)
-├── file-tree/                 # @fte/file-tree: the feature
+├── ui/                        # @fte/ui, the design system
+│   └── src/
+│       ├── components/        # Button, Kbd, Skeleton
+│       ├── tokens/            # Colour roles: CSS variables (light and dark) and their TypeScript names
+│       └── lib/               # cn(), platform helpers
+├── file-tree/                 # @fte/file-tree, the feature
 │   └── src/
 │       ├── model/             # Pure domain logic, no React: tree, move rules, search, formatting
-│       ├── api/               # Mock backend, datasets, TanStack Query hooks
+│       ├── api/               # The contract with the backend, its React context and the Query hooks
+│       ├── server/            # The in-browser mock backend and its datasets
 │       ├── state/             # UI-state reducer: expanded, selected, focused, cut
-│       └── ui/                # Explorer, virtualized tree, details panel, search, status bar
+│       ├── hooks/             # URL state, debounced values
+│       ├── ui/
+│       │   ├── explorer/      # The screen: layout, search box, status bar, loading/empty/error states
+│       │   ├── tree/          # Virtualized tree: view, row, keyboard model, drag and drop
+│       │   ├── details/       # Details panel and the Move to form
+│       │   └── shared/        # File icons, match highlighting
+│       └── testing/           # Render helpers and fixtures, exported as @fte/file-tree/testing
 └── config/                    # Shared TypeScript and Vitest settings
 docs/specs/                    # Specs for upcoming work
 ```

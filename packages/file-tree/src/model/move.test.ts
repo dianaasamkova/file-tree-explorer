@@ -1,4 +1,4 @@
-import { createFixtureTree } from '../test/fixtures'
+import { createFixtureTree } from '../testing/fixtures'
 import { canMove, getDropTarget, moveErrorMessages, moveNode } from './move'
 import { getChildIds } from './tree'
 

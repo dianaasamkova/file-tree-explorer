@@ -1,4 +1,4 @@
-import { createFixtureTree } from '../test/fixtures'
+import { createFixtureTree } from '../testing/fixtures'
 import { getVisibleRows, searchTree } from './visible'
 
 describe('searchTree', () => {

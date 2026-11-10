@@ -5,8 +5,9 @@ import { toast } from 'sonner'
 import { normalizeTree } from '../model/tree'
 import type { Tree } from '../model/types'
 import { ApiProvider, useApi } from './api-context'
-import { createSampleDataset } from './datasets/sample'
-import { ApiError, createMockApi } from './mock-api'
+import { createSampleDataset } from '../server/datasets/sample'
+import { ApiError } from './contract'
+import { createMockApi } from '../server/mock-server'
 import { treeQueryKey, useMoveMutation, useTreeQuery } from './queries'
 
 function setup() {

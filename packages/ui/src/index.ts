@@ -1,6 +1,9 @@
-export { Button, buttonVariants, type ButtonProps } from './button'
-export { cn } from './cn'
-export { Kbd } from './kbd'
-export { MOD_KEY } from './platform'
-export { Skeleton } from './skeleton'
-export { colorTokens, type ColorToken } from './tokens'
+// Components
+export { Button, buttonVariants, type ButtonProps } from './components/button'
+export { Kbd } from './components/kbd'
+export { Skeleton } from './components/skeleton'
+// Tokens (the CSS lives in tokens/tokens.css, exported as '@fte/ui/tokens.css')
+export { colorTokens, type ColorToken } from './tokens/tokens'
+// Helpers
+export { cn } from './lib/cn'
+export { MOD_KEY } from './lib/platform'

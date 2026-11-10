@@ -1,11 +1,11 @@
 import { ChevronRight } from 'lucide-react'
-import { useId, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { Button, Kbd, MOD_KEY } from '@fte/ui'
-import { formatBytes, formatDate, getFileKind, getKindLabel, pluralize } from '../model/format'
-import { canMove } from '../model/move'
-import { getFolderStats, getPath, listFolders, ROOT_LABEL } from '../model/tree'
-import type { FolderTarget, NodeId, Tree, TreeNode } from '../model/types'
-import { FileIcon } from './file-icon'
+import { formatBytes, formatDate, getFileKind, getKindLabel, pluralize } from '../../model/format'
+import { getFolderStats, getPath, ROOT_LABEL } from '../../model/tree'
+import type { FolderTarget, NodeId, Tree, TreeNode } from '../../model/types'
+import { FileIcon } from '../shared/file-icon'
+import { MoveToForm } from './move-to-form'
 
 export interface DetailsPanelProps {
   tree: Tree
@@ -13,8 +13,6 @@ export interface DetailsPanelProps {
   onReveal(id: NodeId): void
   onMove(id: NodeId, target: FolderTarget): void
 }
-
-const ROOT_VALUE = '__root__'
 
 const shortcuts: [keys: string[], action: string][] = [
   [['↑', '↓'], 'Move between items'],
@@ -152,73 +150,5 @@ function NodeDetails({
 
       <MoveToForm tree={tree} node={node} onMove={onMove} />
     </div>
-  )
-}
-
-function MoveToForm({
-  tree,
-  node,
-  onMove,
-}: {
-  tree: Tree
-  node: TreeNode
-  onMove(id: NodeId, target: FolderTarget): void
-}) {
-  const selectId = useId()
-  const hintId = useId()
-  const [value, setValue] = useState('')
-
-  const options = useMemo(
-    () =>
-      listFolders(tree).map(({ node: folder, depth }) => ({
-        value: folder.id,
-        label: `${'   '.repeat(depth + 1)}${folder.name}`,
-        disabled: !canMove(tree, node.id, folder.id).ok,
-      })),
-    [tree, node.id],
-  )
-  const rootDisabled = !canMove(tree, node.id, null).ok
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    if (!value) return
-    onMove(node.id, value === ROOT_VALUE ? null : value)
-    setValue('')
-  }
-
-  return (
-    <form onSubmit={submit} className="border-border flex flex-col gap-2 border-t pt-5">
-      <label htmlFor={selectId} className="text-sm font-medium">
-        Move to
-      </label>
-      <div className="flex gap-2">
-        <select
-          id={selectId}
-          aria-describedby={hintId}
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          className="border-border bg-surface h-8 min-w-0 flex-1 rounded-md border px-2 text-sm"
-        >
-          <option value="" disabled>
-            Choose a folder
-          </option>
-          <option value={ROOT_VALUE} disabled={rootDisabled}>
-            {ROOT_LABEL}
-          </option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value} disabled={option.disabled}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <Button type="submit" variant="primary" disabled={!value}>
-          Move
-        </Button>
-      </div>
-      <p id={hintId} className="text-muted text-xs">
-        Unavailable folders already contain it or an item with the same name. You can also drag the item, or press{' '}
-        <Kbd>{MOD_KEY}</Kbd> <Kbd>X</Kbd> and then <Kbd>{MOD_KEY}</Kbd> <Kbd>V</Kbd> on a folder.
-      </p>
-    </form>
   )
 }

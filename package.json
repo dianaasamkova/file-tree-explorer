@@ -8,6 +8,9 @@
     "packages/*"
   ],
   "packageManager": "npm@10.9.9",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "turbo run dev --filter=@fte/web",
     "build": "turbo run build",

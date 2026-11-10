@@ -7,7 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./styles.css": "./src/styles.css",
-    "./testing": "./src/test/render.tsx"
+    "./testing": "./src/testing/index.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

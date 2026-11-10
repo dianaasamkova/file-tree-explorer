@@ -2,7 +2,8 @@ import { normalizeTree } from '../model/tree'
 import type { ApiNode } from '../model/types'
 import { createRandom, generateDataset } from './datasets/generate'
 import { createSampleDataset, SAMPLE_LOCKED_FOLDER_ID } from './datasets/sample'
-import { ApiError, createMockApi, isDatasetId, parseLatency } from './mock-api'
+import { ApiError, isDatasetId } from '../api/contract'
+import { createMockApi, parseLatency } from './mock-server'
 
 const countItems = (items: ApiNode[]): number =>
   items.reduce((sum, item) => sum + 1 + (item.type === 'folder' ? countItems(item.children) : 0), 0)

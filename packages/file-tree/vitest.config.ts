@@ -3,7 +3,7 @@ import { vitestConfig } from '../config/vitest'
 
 export default defineConfig({
   test: vitestConfig({
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/testing/setup.ts'],
     // The data logic must be fully covered; the UI at 95%, with behaviour tests rather than line-chasing.
     thresholds: {
       statements: 95,

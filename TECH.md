@@ -53,9 +53,10 @@ apps/web  ──▶  @fte/file-tree  ──▶  @fte/ui
 Inside `@fte/file-tree`:
 
 - **`model/`** is plain TypeScript with no React: normalizing the API response, move rules, search and the flattening of the tree into rows. It's where the logic lives and where most tests are.
-- **`api/`** holds the backend contract (`FileTreeApi`), an in-memory implementation, and the Query hooks. The UI gets the client through context, so tests and the demo inject their own.
+- **`api/`** is the client side of the backend: the contract (`FileTreeApi`, `ApiError`), the React context that injects an implementation, and the TanStack Query hooks.
+- **`server/`** is one implementation of that contract: the in-browser mock server and its datasets. A real backend would replace this folder and nothing else.
 - **`state/`** is one typed reducer for UI state.
-- **`ui/`** components take data and callbacks; `FileTreeExplorer` is the only one that wires state together.
+- **`ui/`** is grouped by part of the screen: `explorer/` wires state together and lays out the screen, `tree/` is the virtualized tree (the view owns focus and scrolling; the keyboard model, drag and drop and the row are separate modules), `details/` is the side panel, and `shared/` holds pieces used by both.
 
 ### Data model
 

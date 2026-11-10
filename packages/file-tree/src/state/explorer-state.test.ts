@@ -1,4 +1,4 @@
-import { createFixtureTree } from '../test/fixtures'
+import { createFixtureTree } from '../testing/fixtures'
 import { searchTree } from '../model/visible'
 import { createInitialState, explorerReducer, getExpandedIds, type ExplorerAction } from './explorer-state'
 

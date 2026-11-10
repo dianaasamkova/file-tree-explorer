@@ -4,8 +4,9 @@ import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
 import { Toaster } from 'sonner'
 import { ApiProvider } from '../api/api-context'
-import { createMockApi, isDatasetId, type FileTreeApi } from '../api/mock-api'
-import { FileTreeExplorer } from '../ui/file-tree-explorer'
+import { isDatasetId, type FileTreeApi } from '../api/contract'
+import { createMockApi } from '../server/mock-server'
+import { FileTreeExplorer } from '../ui/explorer/file-tree-explorer'
 
 /** Renders `ui` with a fresh query client and an in-memory backend with no latency. */
 export function renderWithProviders(

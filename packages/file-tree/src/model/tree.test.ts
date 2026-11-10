@@ -1,4 +1,4 @@
-import { createFixtureTree, fixtureResponse, file } from '../test/fixtures'
+import { createFixtureTree, fixtureResponse, file } from '../testing/fixtures'
 import {
   compareNodes,
   denormalizeTree,

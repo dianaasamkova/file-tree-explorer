@@ -4,7 +4,7 @@ import { canMove, moveNode } from '../model/move'
 import { getDisplayName, normalizeTree } from '../model/tree'
 import type { FolderTarget, NodeId, Tree } from '../model/types'
 import { useApi } from './api-context'
-import type { DatasetId } from './mock-api'
+import type { DatasetId } from './contract'
 
 export const treeQueryKey = (dataset: DatasetId) => ['tree', dataset] as const
 

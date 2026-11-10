@@ -12,8 +12,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@fte/ui'
-import { getFileKind, type FileKind } from '../model/format'
-import type { TreeNode } from '../model/types'
+import { getFileKind, type FileKind } from '../../model/format'
+import type { TreeNode } from '../../model/types'
 
 const icons: Record<Exclude<FileKind, 'folder'>, LucideIcon> = {
   image: FileImage,

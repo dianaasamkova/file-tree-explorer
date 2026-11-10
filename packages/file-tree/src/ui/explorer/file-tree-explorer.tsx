@@ -1,4 +1,3 @@
-import { FolderSearch, RefreshCw, TriangleAlert } from 'lucide-react'
 import {
   useCallback,
   useDeferredValue,
@@ -10,25 +9,25 @@ import {
   type ReactNode,
 } from 'react'
 import { toast } from 'sonner'
-import { Button, Skeleton } from '@fte/ui'
-import { useUrlState } from '../lib/use-url-state'
-import type { DatasetId } from '../api/mock-api'
-import { useMoveMutation, useTreeQuery } from '../api/queries'
-import { canMove, moveErrorMessages } from '../model/move'
-import { getAncestorIds, getDisplayName } from '../model/tree'
-import type { FolderTarget, NodeId, Tree } from '../model/types'
-import { getVisibleRows, searchTree } from '../model/visible'
+import { useUrlState } from '../../hooks/use-url-state'
+import type { DatasetId } from '../../api/contract'
+import { useMoveMutation, useTreeQuery } from '../../api/queries'
+import { canMove, moveErrorMessages } from '../../model/move'
+import { getAncestorIds, getDisplayName } from '../../model/tree'
+import type { FolderTarget, NodeId, Tree } from '../../model/types'
+import { getVisibleRows, searchTree } from '../../model/visible'
 import {
   getExpandedIds,
   useExplorerState,
   type ExplorerAction,
   type ExplorerState,
   type ExpansionMode,
-} from '../state/explorer-state'
-import { DetailsPanel, DetailsPlaceholder } from './details-panel'
+} from '../../state/explorer-state'
+import { DetailsPanel, DetailsPlaceholder } from '../details/details-panel'
+import { EmptyState, ErrorState, LoadingState } from './explorer-states'
 import { SearchBox } from './search-box'
 import { StatusBar } from './status-bar'
-import { TreeView, type TreeViewHandle } from './tree-view'
+import { TreeView, type TreeViewHandle } from '../tree/tree-view'
 
 export const TREE_ID = 'file-tree'
 
@@ -195,55 +194,5 @@ function ExplorerSlots({ main, details, status }: Record<'main' | 'details' | 's
       <div className="flex min-h-0 [grid-area:details] *:flex-1">{details}</div>
       <div className="[grid-area:status]">{status}</div>
     </>
-  )
-}
-
-function LoadingState() {
-  return (
-    <div aria-busy="true" className="flex flex-col gap-2 p-3">
-      <span className="sr-only">Loading files…</span>
-      {[40, 55, 35, 62, 48, 30, 52, 44].map((width, index) => (
-        <div key={index} className="flex h-6 items-center gap-2" style={{ paddingLeft: index % 3 === 2 ? 26 : 6 }}>
-          <Skeleton className="size-4" />
-          <Skeleton className="h-3.5" style={{ width: `${width}%` }} />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** Shown only when nothing has loaded. Retrying puts the query back to pending, which shows the skeleton. */
-function ErrorState({ message, onRetry }: { message: string; onRetry(): void }) {
-  return (
-    <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-      <TriangleAlert aria-hidden className="text-danger size-6" />
-      <div>
-        <p className="font-medium">Couldn't load files</p>
-        <p className="text-muted mt-1 text-sm">{message}</p>
-      </div>
-      <Button onClick={onRetry}>
-        <RefreshCw />
-        Retry
-      </Button>
-    </div>
-  )
-}
-
-function EmptyState({ query, onClear }: { query: string | null; onClear(): void }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-      <FolderSearch aria-hidden className="text-muted size-6" />
-      {query === null ? (
-        <p className="font-medium">This drive is empty</p>
-      ) : (
-        <>
-          <div>
-            <p className="font-medium">No files or folders match “{query.trim()}”</p>
-            <p className="text-muted mt-1 text-sm">Check the spelling, or search for part of a name.</p>
-          </div>
-          <Button onClick={onClear}>Clear search</Button>
-        </>
-      )}
-    </div>
   )
 }

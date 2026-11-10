@@ -1,8 +1,8 @@
 import { Scissors } from 'lucide-react'
 import { Kbd, MOD_KEY } from '@fte/ui'
-import { useDebouncedValue } from '../lib/use-debounced-value'
-import { pluralize } from '../model/format'
-import type { TreeNode } from '../model/types'
+import { useDebouncedValue } from '../../hooks/use-debounced-value'
+import { pluralize } from '../../model/format'
+import type { TreeNode } from '../../model/types'
 
 export interface StatusBarProps {
   total: number | null

@@ -1,4 +1,4 @@
-import { file } from '../test/fixtures'
+import { file } from '../testing/fixtures'
 import { formatBytes, formatDate, getFileKind, getKindLabel, pluralize } from './format'
 import type { TreeNode } from './types'
 

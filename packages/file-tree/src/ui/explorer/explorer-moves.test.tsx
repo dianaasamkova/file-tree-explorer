@@ -1,6 +1,7 @@
 import { createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
-import { findItem, getActiveItem, getDetails, getItem, queryItem, renderExplorer } from '../test/render'
-import { ApiError, createMockApi } from '../api/mock-api'
+import { findItem, getActiveItem, getDetails, getItem, queryItem, renderExplorer } from '../../testing'
+import { ApiError } from '../../api/contract'
+import { createMockApi } from '../../server/mock-server'
 
 async function renderLoaded(api = createMockApi()) {
   const app = renderExplorer({ api })

@@ -1,5 +1,5 @@
 import { createContext, use, type ReactNode } from 'react'
-import type { FileTreeApi } from './mock-api'
+import type { FileTreeApi } from './contract'
 
 const ApiContext = createContext<FileTreeApi | null>(null)
 

@@ -1,35 +1,9 @@
-import { moveErrorMessages, canMove, moveNode } from '../model/move'
+import { canMove, moveErrorMessages, moveNode } from '../model/move'
 import { denormalizeTree, getAncestorIds, normalizeTree } from '../model/tree'
-import type { ApiTreeResponse, FolderTarget, NodeId, Tree } from '../model/types'
+import { ApiError, type DatasetId, type FileTreeApi } from '../api/contract'
+import type { ApiTreeResponse, NodeId, Tree } from '../model/types'
 import { generateDataset } from './datasets/generate'
 import { createSampleDataset, SAMPLE_LOCKED_FOLDER_ID } from './datasets/sample'
-
-export type DatasetId = 'sample' | 'large'
-
-export const datasets: Record<DatasetId, { label: string; description: string }> = {
-  sample: { label: 'Sample drive', description: 'A small team drive' },
-  large: { label: '10,000 items', description: 'A generated drive for performance' },
-}
-
-export function isDatasetId(value: unknown): value is DatasetId {
-  return value === 'sample' || value === 'large'
-}
-
-export class ApiError extends Error {
-  readonly status: number
-
-  constructor(status: number, message: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-  }
-}
-
-/** The contract the UI depends on. A real backend client would implement the same interface. */
-export interface FileTreeApi {
-  getTree(dataset: DatasetId, signal?: AbortSignal): Promise<ApiTreeResponse>
-  moveNode(dataset: DatasetId, id: NodeId, target: FolderTarget): Promise<void>
-}
 
 export interface MockApiOptions {
   /** Simulated network latency in ms. Use 0 in tests. */
@@ -64,7 +38,7 @@ const lockedFolders: Record<DatasetId, NodeId[]> = {
 }
 
 /**
- * An in-memory backend. It keeps its own copy of each drive and re-checks every rule on move,
+ * An in-memory backend that implements the API contract. It keeps its own copy of each drive and re-checks every rule on move,
  * as a real server must: the client's checks are only for fast feedback. It also enforces one
  * rule the client does not know about (read-only folders), which is how a failed optimistic
  * update can be seen in the demo.
