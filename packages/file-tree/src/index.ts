@@ -6,3 +6,5 @@ export { createMockApi, parseDemoOptions, parseLatency, type MockApiOptions } fr
 // The feature itself.
 export { useUrlState } from './hooks/use-url-state'
 export { FileTreeExplorer, TREE_ID } from './ui/explorer/file-tree-explorer'
+// Product analytics: connect a real service with setTracker.
+export { setTracker, type MoveMethod, type ProductEvent, type Tracker } from './analytics/events'
