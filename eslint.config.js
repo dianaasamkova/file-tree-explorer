@@ -11,7 +11,17 @@ const deepImports = {
 }
 
 export default tseslint.config(
-  { ignores: ['**/dist', '**/coverage', '**/playwright-report', '**/test-results', '**/.turbo', '**/.stryker-tmp', '**/reports'] },
+  {
+    ignores: [
+      '**/dist',
+      '**/coverage',
+      '**/playwright-report',
+      '**/test-results',
+      '**/.turbo',
+      '**/.stryker-tmp',
+      '**/reports',
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.strict],
     files: ['**/*.{ts,tsx}'],

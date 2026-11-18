@@ -1,29 +1,30 @@
-import { z } from 'zod'
+// zod/mini: the same validation, tree-shakable (the full build added about 26 KB gzipped).
+import { z } from 'zod/mini'
 import type { ApiFile, ApiFolder, ApiNode, ApiTreeResponse } from '../model/types'
 import { ApiError } from './contract'
 
 const fileSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
+  id: z.string().check(z.minLength(1)),
+  name: z.string().check(z.minLength(1)),
   type: z.literal('file'),
-  size: z.number().int().nonnegative(),
+  size: z.number().check(z.int(), z.nonnegative()),
   mimeType: z.string(),
   modifiedAt: z.iso.datetime(),
-}) satisfies z.ZodType<ApiFile>
+}) satisfies z.ZodMiniType<ApiFile>
 
-const folderSchema: z.ZodType<ApiFolder> = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
+const folderSchema: z.ZodMiniType<ApiFolder> = z.object({
+  id: z.string().check(z.minLength(1)),
+  name: z.string().check(z.minLength(1)),
   type: z.literal('folder'),
-  get children(): z.ZodArray<z.ZodType<ApiNode>> {
+  get children(): z.ZodMiniArray<z.ZodMiniType<ApiNode>> {
     return z.array(nodeSchema)
   },
 })
 
-const nodeSchema: z.ZodType<ApiNode> = z.union([fileSchema, folderSchema])
+const nodeSchema: z.ZodMiniType<ApiNode> = z.union([fileSchema, folderSchema])
 
 /** The shape the backend promises. `satisfies` keeps it in step with the TypeScript types. */
-export const treeResponseSchema = z.object({ items: z.array(nodeSchema) }) satisfies z.ZodType<ApiTreeResponse>
+export const treeResponseSchema = z.object({ items: z.array(nodeSchema) }) satisfies z.ZodMiniType<ApiTreeResponse>
 
 /**
  * Checks a response at the boundary, before anything reaches the cache or the UI. Bad data then
