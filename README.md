@@ -56,7 +56,7 @@ Run them from the repository root; Turborepo runs each package's task and caches
 | `npm run lint`          | ESLint, including the rules for package boundaries |
 | `npm run format`        | Prettier (with class sorting for Tailwind)         |
 
-Before the first e2e run: `npx playwright install chromium`.
+Before the first e2e run: `npx playwright install chromium`. To use a Chromium that is already installed instead, set `PLAYWRIGHT_CHROMIUM_PATH` to its executable.
 
 ## Project structure
 
