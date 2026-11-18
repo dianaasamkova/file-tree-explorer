@@ -9,3 +9,5 @@ test-results
 .vscode/*
 !.vscode/extensions.json
 .turbo
+reports
+.stryker-tmp

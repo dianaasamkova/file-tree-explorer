@@ -22,7 +22,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
-    "test:e2e": "npm run test:e2e -w @fte/web"
+    "test:e2e": "npm run test:e2e -w @fte/web",
+    "test:mutation": "npm run test:mutation -w @fte/file-tree"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

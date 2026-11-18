@@ -12,7 +12,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:mutation": "stryker run"
   },
   "dependencies": {
     "@fte/ui": "*",
