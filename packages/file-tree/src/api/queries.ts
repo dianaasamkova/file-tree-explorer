@@ -4,16 +4,17 @@ import { canMove, moveNode } from '../model/move'
 import { getDisplayName, normalizeTree } from '../model/tree'
 import type { FolderTarget, NodeId, Tree } from '../model/types'
 import { useApi } from './api-context'
+import { parseTreeResponse } from './schema'
 import type { DatasetId } from './contract'
 
 export const treeQueryKey = (dataset: DatasetId) => ['tree', dataset] as const
 
-/** Server state: the whole drive, normalized once when it arrives. */
+/** Server state: the whole drive, validated and normalized once when it arrives. */
 export function useTreeQuery(dataset: DatasetId) {
   const api = useApi()
   return useQuery({
     queryKey: treeQueryKey(dataset),
-    queryFn: async ({ signal }) => normalizeTree(await api.getTree(dataset, signal)),
+    queryFn: async ({ signal }) => normalizeTree(parseTreeResponse(await api.getTree(dataset, signal))),
     staleTime: 60_000,
   })
 }

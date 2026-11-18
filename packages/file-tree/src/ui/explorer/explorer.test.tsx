@@ -56,6 +56,13 @@ describe('loading', () => {
     expect(input).toHaveValue('kick')
   })
 
+  it('explains a drive in an unexpected format instead of crashing', async () => {
+    renderExplorer({ api: createMockApi({ corrupt: true }) })
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent("Couldn't load files")
+    expect(alert).toHaveTextContent('The server sent the drive in an unexpected format at items.0.')
+  })
+
   it('shows the skeleton again while retrying', async () => {
     const api = createMockApi()
     let finish: () => void = () => {}
