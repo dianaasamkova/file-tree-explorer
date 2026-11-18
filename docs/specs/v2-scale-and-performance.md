@@ -362,7 +362,7 @@ Each phase is its own pull request with a green CI, so every step can be reviewe
 
 | Phase | Content                                                                                                      | Effort   |
 | ----- | ------------------------------------------------------------------------------------------------------------ | -------- |
-| P0    | Monorepo, design system package, shared config (B1, B2 without visual tests), GitHub Pages deploy            | 2–3 days |
+| P0    | Monorepo, design system package, shared config (B1, B2 without visual tests), GitHub Pages deploy (done)     | 2–3 days |
 | P1    | Quality: ADRs, property-based tests, mutation testing, runtime validation, product page (Q1–Q5)              | 2–3 days |
 | P2    | Performance: panel, CI budgets, fixes 4.2 a–f, virtualized "Move to", clearer drag and drop (F12)            | 3–4 days |
 | P3    | Scale: worker server, lazy folders, infinite pages, server search, 1M drive (F1)                             | 4–6 days |
