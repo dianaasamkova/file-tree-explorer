@@ -28,7 +28,7 @@ describe('useMoveMutation', () => {
     const success = vi.spyOn(toast, 'success')
     const { api, queryClient, result } = setup()
 
-    result.current.mutate({ id: 'welcome-md', target: 'drafts' })
+    result.current.mutate({ id: 'welcome-md', target: 'drafts', method: 'drag' })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(api.moveNode).toHaveBeenCalledWith('sample', 'welcome-md', 'drafts')
@@ -42,7 +42,7 @@ describe('useMoveMutation', () => {
     const tree = normalizeTree(createSampleDataset())
     queryClient.setQueryData(treeQueryKey('sample'), tree)
 
-    result.current.mutate({ id: 'engineering', target: 'engineering/api' })
+    result.current.mutate({ id: 'engineering', target: 'engineering/api', method: 'drag' })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(api.moveNode).not.toHaveBeenCalled()
@@ -78,8 +78,8 @@ describe('useMoveMutation with several moves in flight', () => {
 
   it('waits for the last move before refetching, so a refetch cannot undo a pending move', async () => {
     const { api, pending, result, parentOf } = await setupConcurrent()
-    act(() => result.current.move.mutate({ id: 'welcome-md', target: 'drafts' }))
-    act(() => result.current.move.mutate({ id: 'team', target: 'clients' }))
+    act(() => result.current.move.mutate({ id: 'welcome-md', target: 'drafts', method: 'drag' }))
+    act(() => result.current.move.mutate({ id: 'team', target: 'clients', method: 'drag' }))
     await waitFor(() => expect(pending).toHaveLength(2))
 
     await act(async () => pending[0]!.resolve())
@@ -92,8 +92,8 @@ describe('useMoveMutation with several moves in flight', () => {
 
   it('a failed move reverts only itself, not the moves still in flight', async () => {
     const { api, pending, result, parentOf } = await setupConcurrent()
-    act(() => result.current.move.mutate({ id: 'team', target: 'clients' }))
-    act(() => result.current.move.mutate({ id: 'welcome-md', target: 'drafts' }))
+    act(() => result.current.move.mutate({ id: 'team', target: 'clients', method: 'drag' }))
+    act(() => result.current.move.mutate({ id: 'welcome-md', target: 'drafts', method: 'drag' }))
     await waitFor(() => expect(pending).toHaveLength(2))
 
     expect(api.moveNode).toHaveBeenNthCalledWith(1, 'sample', 'team', 'clients')
@@ -105,8 +105,8 @@ describe('useMoveMutation with several moves in flight', () => {
 
   it('refetches when a failed move can no longer be reverted on its own', async () => {
     const { api, pending, result, parentOf } = await setupConcurrent()
-    act(() => result.current.move.mutate({ id: 'welcome-md', target: 'drafts' }))
-    act(() => result.current.move.mutate({ id: 'welcome-md', target: 'team' }))
+    act(() => result.current.move.mutate({ id: 'welcome-md', target: 'drafts', method: 'drag' }))
+    act(() => result.current.move.mutate({ id: 'welcome-md', target: 'team', method: 'drag' }))
     await waitFor(() => expect(pending).toHaveLength(2))
     expect(parentOf('welcome-md')).toBe('team')
 

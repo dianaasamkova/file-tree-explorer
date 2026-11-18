@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import { findItem, getActiveItem, getDetails, getItem, queryItem, renderExplorer, searchParam } from '../../testing'
 import { ApiError } from '../../api/contract'
 import { createMockApi } from '../../server/mock-server'
+import { setTracker, type ProductEvent } from '../../analytics/events'
 
 async function renderLoaded(url?: string) {
   const app = renderExplorer({ url })
@@ -54,6 +55,13 @@ describe('loading', () => {
     expect(screen.getByRole('searchbox')).toBe(input)
     expect(input).toHaveFocus()
     expect(input).toHaveValue('kick')
+  })
+
+  it('explains a drive in an unexpected format instead of crashing', async () => {
+    renderExplorer({ api: createMockApi({ corrupt: true }) })
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent("Couldn't load files")
+    expect(alert).toHaveTextContent('The server sent the drive in an unexpected format at items.0.')
   })
 
   it('shows the skeleton again while retrying', async () => {
@@ -253,6 +261,18 @@ describe('search', () => {
 
     await user.type(input, 'team{Escape}')
     expect(input).toHaveValue('')
+  })
+
+  it('records a search once typing pauses, including searches that find nothing', async () => {
+    const events: ProductEvent[] = []
+    const restore = setTracker((event) => events.push(event))
+    const { user } = await renderLoaded()
+    await user.type(screen.getByRole('searchbox'), 'zzz')
+
+    await waitFor(() => expect(events).toEqual([{ name: 'search_settled', queryLength: 3, matches: 0 }]), {
+      timeout: 2000,
+    })
+    restore()
   })
 
   it('a matching folder keeps all its content', async () => {

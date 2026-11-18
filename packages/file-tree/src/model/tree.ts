@@ -73,7 +73,8 @@ export function getAncestorIds(tree: Tree, id: NodeId): NodeId[] {
   let current = tree.nodes[id]?.parentId ?? null
   while (current !== null) {
     ancestors.push(current)
-    current = tree.nodes[current]?.parentId ?? null
+    // Every parent in a normalized tree exists: normalizeTree builds it so and moves keep it.
+    current = tree.nodes[current]!.parentId
   }
   return ancestors
 }

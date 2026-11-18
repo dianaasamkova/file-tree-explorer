@@ -2,6 +2,7 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -9,6 +10,8 @@ import {
   type ReactNode,
 } from 'react'
 import { toast } from 'sonner'
+import { track, type MoveMethod } from '../../analytics/events'
+import { useDebouncedValue } from '../../hooks/use-debounced-value'
 import { useUrlState } from '../../hooks/use-url-state'
 import type { DatasetId } from '../../api/contract'
 import { useMoveMutation, useTreeQuery } from '../../api/queries'
@@ -32,6 +35,9 @@ import { TreeView, type TreeViewHandle } from '../tree/tree-view'
 export const TREE_ID = 'file-tree'
 
 const urlKeys = ['q', 'file'] as const
+
+/** How long typing must pause before a search counts as settled, for product analytics. */
+const SEARCH_SETTLED_DELAY = 800
 
 /**
  * The explorer screen. It wires three kinds of state together:
@@ -116,6 +122,13 @@ function LoadedExplorer({ dataset, tree, query, onQueryChange, state, dispatch }
   )
   const rows = useMemo(() => getVisibleRows(tree, expandedIds, search?.visibleIds), [tree, expandedIds, search])
 
+  // A search counts as settled once typing has paused; only then is it worth measuring.
+  const settledQuery = useDebouncedValue(deferredQuery.trim(), SEARCH_SETTLED_DELAY)
+  const reportSearch = useEffectEvent((query: string) => {
+    if (query) track({ name: 'search_settled', queryLength: query.length, matches: search!.matchIds.size })
+  })
+  useEffect(() => reportSearch(settledQuery), [settledQuery])
+
   // A shared link (?file=…) opens the folders above the item. Only once: later the tree changes with every move.
   const linkHandled = useRef(false)
   useEffect(() => {
@@ -127,13 +140,14 @@ function LoadedExplorer({ dataset, tree, query, onQueryChange, state, dispatch }
     else dispatch({ type: 'select', id: null })
   }, [tree, state.selectedId, dispatch])
 
-  const moveItem = (id: NodeId, target: FolderTarget) => {
+  const moveItem = (id: NodeId, target: FolderTarget, method: MoveMethod) => {
     const check = canMove(tree, id, target)
     if (!check.ok) {
+      track({ name: 'move_refused', method, reason: check.reason })
       toast.error(`Couldn't move “${getDisplayName(tree, id)}”`, { description: moveErrorMessages[check.reason] })
       return
     }
-    move.mutate({ id, target })
+    move.mutate({ id, target, method })
     if (target !== null) dispatch({ type: 'expand', ids: [target], mode })
     if (state.cutId === id) dispatch({ type: 'cut', id: null })
   }
@@ -166,12 +180,19 @@ function LoadedExplorer({ dataset, tree, query, onQueryChange, state, dispatch }
             }
             onExpandMany={(ids) => dispatch({ type: 'expand', ids, mode })}
             onCut={(id) => dispatch({ type: 'cut', id })}
-            onPaste={(target) => state.cutId !== null && moveItem(state.cutId, target)}
-            onMove={moveItem}
+            onPaste={(target) => state.cutId !== null && moveItem(state.cutId, target, 'keyboard')}
+            onMove={(id, target) => moveItem(id, target, 'drag')}
           />
         )
       }
-      details={<DetailsPanel tree={tree} selectedId={state.selectedId} onReveal={reveal} onMove={moveItem} />}
+      details={
+        <DetailsPanel
+          tree={tree}
+          selectedId={state.selectedId}
+          onReveal={reveal}
+          onMove={(id, target) => moveItem(id, target, 'picker')}
+        />
+      }
       status={
         <StatusBar
           total={Object.keys(tree.nodes).length}

@@ -1,0 +1,27 @@
+name: Mutation testing
+
+# Too slow for every push (about 6 minutes), so it runs weekly and on demand.
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  mutation:
+    name: Mutation score of the data logic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Fails below a 90% mutation score (see packages/file-tree/stryker.config.mjs).
+      - run: npm run test:mutation
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: mutation-report
+          path: packages/file-tree/reports/mutation
+          retention-days: 30

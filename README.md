@@ -23,7 +23,8 @@ A file manager's tree done properly: browse a drive with the keyboard or the mou
 - **Shareable state.** The search, selected file and drive live in the URL (`?q=…&file=…&dataset=large`).
 - **Light and dark themes designed together**, following the system setting until you choose, with no flash on load.
 - **Organised like a product team's codebase.** A monorepo with a design system package (`@fte/ui`), a feature package (`@fte/file-tree`) and the app, with dependency rules enforced by lint, a page that shows every token and component, and builds and tests cached by Turborepo.
-- **Tested:** 160 unit and component tests. Coverage is 100% today; CI requires 100% for the data logic and 95% elsewhere. A Playwright suite covers keyboard use, drag and drop, the 10,000-item drive and accessibility.
+- **Tested beyond coverage.** 180 unit, component and property-based tests at 100% coverage; a **97.8% mutation score** on the data logic (Stryker), property-based tests that check the tree model against hundreds of random drives, and a Playwright suite for keyboard use, drag and drop, the 10,000-item drive and accessibility.
+- **Safe at the boundary, measured in product terms.** Every response from the server is validated before it reaches the app, and typed product events say whether search finds things and how people move files. See [Product](TECH.md#5-product).
 
 ## Tech stack
 
@@ -38,23 +39,24 @@ npm ci
 npm run dev        # http://localhost:5173
 ```
 
-The backend is an in-browser mock with 400 ms of latency, so loading states and optimistic updates are visible. Add `?latency=0` to the URL to turn it off. Changes reset on reload.
+The backend is an in-browser mock with 400 ms of latency, so loading states and optimistic updates are visible. Add `?latency=0` to the URL to turn it off, or `?corrupt` to see how the app handles a server that sends malformed data. Changes reset on reload.
 
 ## Scripts
 
 Run them from the repository root; Turborepo runs each package's task and caches the result.
 
-| Script                  | What it does                                       |
-| ----------------------- | -------------------------------------------------- |
-| `npm run dev`           | Development server for the demo app                |
-| `npm run build`         | Production build                                   |
-| `npm run preview`       | Serve the production build                         |
-| `npm test`              | Unit and component tests in every package          |
-| `npm run test:coverage` | Tests with each package's coverage thresholds      |
-| `npm run test:e2e`      | Playwright tests against the production build      |
-| `npm run typecheck`     | TypeScript in every package                        |
-| `npm run lint`          | ESLint, including the rules for package boundaries |
-| `npm run format`        | Prettier (with class sorting for Tailwind)         |
+| Script                  | What it does                                         |
+| ----------------------- | ---------------------------------------------------- |
+| `npm run dev`           | Development server for the demo app                  |
+| `npm run build`         | Production build                                     |
+| `npm run preview`       | Serve the production build                           |
+| `npm test`              | Unit and component tests in every package            |
+| `npm run test:coverage` | Tests with each package's coverage thresholds        |
+| `npm run test:e2e`      | Playwright tests against the production build        |
+| `npm run test:mutation` | Mutation testing of the data logic (about 6 minutes) |
+| `npm run typecheck`     | TypeScript in every package                          |
+| `npm run lint`          | ESLint, including the rules for package boundaries   |
+| `npm run format`        | Prettier (with class sorting for Tailwind)           |
 
 Before the first e2e run: `npx playwright install chromium`. To use a Chromium that is already installed instead, set `PLAYWRIGHT_CHROMIUM_PATH` to its executable.
 
@@ -92,4 +94,10 @@ Dependencies only point down: the app uses the feature and the design system, th
 
 ## Docs
 
-[TECH.md](TECH.md): problem and acceptance criteria, architecture, decisions and trade-offs, accessibility, testing strategy, bundle size before and after, a retrospective and a roadmap.
+- [TECH.md](TECH.md): problem and acceptance criteria, architecture, decisions, accessibility, product metrics, testing strategy, bundle size before and after, a retrospective and the roadmap.
+- [docs/adr](docs/adr/README.md): architecture decision records, one page per decision with the options and the evidence.
+- [docs/specs](docs/specs/v2-scale-and-performance.md): the plan for the next phases, with measured baselines.
+
+## License
+
+[MIT](LICENSE) © 2024–2026 Diana Samkova

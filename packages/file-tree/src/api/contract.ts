@@ -1,4 +1,4 @@
-import type { ApiTreeResponse, FolderTarget, NodeId } from '../model/types'
+import type { FolderTarget, NodeId } from '../model/types'
 
 /**
  * The contract between the UI and the backend. The UI depends only on this file; the in-browser
@@ -19,8 +19,8 @@ export function isDatasetId(value: unknown): value is DatasetId {
 export class ApiError extends Error {
   readonly status: number
 
-  constructor(status: number, message: string) {
-    super(message)
+  constructor(status: number, message: string, options?: ErrorOptions) {
+    super(message, options)
     this.name = 'ApiError'
     this.status = status
   }
@@ -28,6 +28,7 @@ export class ApiError extends Error {
 
 /** The contract the UI depends on. A real backend client would implement the same interface. */
 export interface FileTreeApi {
-  getTree(dataset: DatasetId, signal?: AbortSignal): Promise<ApiTreeResponse>
+  /** The drive as nested JSON. Its shape isn't trusted: the client validates it (see schema.ts). */
+  getTree(dataset: DatasetId, signal?: AbortSignal): Promise<unknown>
   moveNode(dataset: DatasetId, id: NodeId, target: FolderTarget): Promise<void>
 }

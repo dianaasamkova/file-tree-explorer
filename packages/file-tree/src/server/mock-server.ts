@@ -8,6 +8,14 @@ import { createSampleDataset, SAMPLE_LOCKED_FOLDER_ID } from './datasets/sample'
 export interface MockApiOptions {
   /** Simulated network latency in ms. Use 0 in tests. */
   latency?: number
+  /** Send malformed drives, to show how the client handles a backend that breaks its contract. */
+  corrupt?: boolean
+}
+
+/** Demo switches from the page's query string: `?latency=0`, `?corrupt`. */
+export function parseDemoOptions(search: string): Required<MockApiOptions> {
+  const params = new URLSearchParams(search)
+  return { latency: parseLatency(params.get('latency')), corrupt: params.has('corrupt') }
 }
 
 /** Reads `?latency=` from the URL: a number of ms, or the default when missing or invalid. */
@@ -43,7 +51,7 @@ const lockedFolders: Record<DatasetId, NodeId[]> = {
  * rule the client does not know about (read-only folders), which is how a failed optimistic
  * update can be seen in the demo.
  */
-export function createMockApi({ latency = 0 }: MockApiOptions = {}): FileTreeApi {
+export function createMockApi({ latency = 0, corrupt = false }: MockApiOptions = {}): FileTreeApi {
   const store = new Map<DatasetId, Tree>()
 
   const load = (dataset: DatasetId) => {
@@ -64,7 +72,10 @@ export function createMockApi({ latency = 0 }: MockApiOptions = {}): FileTreeApi
   return {
     async getTree(dataset, signal) {
       await delay(latency, signal)
-      return denormalizeTree(load(dataset))
+      const response = denormalizeTree(load(dataset))
+      // A folder without its children: what a buggy backend might send.
+      if (corrupt) return { items: [{ id: 'broken', name: 'Broken', type: 'folder' }, ...response.items] }
+      return response
     },
 
     async moveNode(dataset, id, target) {

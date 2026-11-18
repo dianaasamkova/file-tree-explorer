@@ -3,7 +3,8 @@ import type { ApiNode } from '../model/types'
 import { createRandom, generateDataset } from './datasets/generate'
 import { createSampleDataset, SAMPLE_LOCKED_FOLDER_ID } from './datasets/sample'
 import { ApiError, isDatasetId } from '../api/contract'
-import { createMockApi, parseLatency } from './mock-server'
+import { parseTreeResponse } from '../api/schema'
+import { createMockApi, parseDemoOptions, parseLatency } from './mock-server'
 
 const countItems = (items: ApiNode[]): number =>
   items.reduce((sum, item) => sum + 1 + (item.type === 'folder' ? countItems(item.children) : 0), 0)
@@ -59,15 +60,15 @@ describe('datasets', () => {
 describe('createMockApi', () => {
   it('returns a fresh copy of the tree each time', async () => {
     const api = createMockApi()
-    const first = await api.getTree('sample')
+    const first = parseTreeResponse(await api.getTree('sample'))
     first.items.length = 0
-    expect((await api.getTree('sample')).items.length).toBeGreaterThan(0)
+    expect(parseTreeResponse(await api.getTree('sample')).items.length).toBeGreaterThan(0)
   })
 
   it('persists moves', async () => {
     const api = createMockApi()
     await api.moveNode('sample', 'welcome-md', 'drafts')
-    const tree = normalizeTree(await api.getTree('sample'))
+    const tree = normalizeTree(parseTreeResponse(await api.getTree('sample')))
     expect(tree.nodes['welcome-md']?.parentId).toBe('drafts')
   })
 
@@ -112,5 +113,21 @@ describe('parseLatency', () => {
     ['Infinity', 400],
   ])('%j → %d ms', (value, latency) => {
     expect(parseLatency(value)).toBe(latency)
+  })
+})
+
+describe('parseDemoOptions', () => {
+  it('reads the latency and the corrupt switch from the query string', () => {
+    expect(parseDemoOptions('?latency=0&corrupt')).toEqual({ latency: 0, corrupt: true })
+    expect(parseDemoOptions('')).toEqual({ latency: 400, corrupt: false })
+  })
+})
+
+describe('the corrupt switch', () => {
+  it('sends a drive that breaks the contract', async () => {
+    const api = createMockApi({ corrupt: true })
+    await expect(api.getTree('sample').then(parseTreeResponse)).rejects.toThrow(
+      'The server sent the drive in an unexpected format at items.0',
+    )
   })
 })

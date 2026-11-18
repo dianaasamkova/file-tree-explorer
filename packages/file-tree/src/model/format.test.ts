@@ -19,6 +19,8 @@ describe('getFileKind', () => {
     ['notes.md', 'text/markdown', 'document'],
     ['letter.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'document'],
     ['binary', 'application/octet-stream', 'other'],
+    ['export', 'text/csv', 'spreadsheet'],
+    ['README', 'unknown', 'other'],
   ])('%s (%s) is %s', (name, mime, kind) => {
     expect(getFileKind(asNode(name, mime))).toBe(kind)
   })
@@ -27,9 +29,31 @@ describe('getFileKind', () => {
     expect(getFileKind({ id: 'f', name: 'F', type: 'folder', parentId: null, childIds: [] })).toBe('folder')
   })
 
-  it('has a readable label for each kind', () => {
-    expect(getKindLabel('pdf')).toBe('PDF document')
-    expect(getKindLabel('other')).toBe('File')
+  it('has a distinct, readable label for each kind', () => {
+    const kinds = [
+      'folder',
+      'image',
+      'video',
+      'audio',
+      'pdf',
+      'spreadsheet',
+      'document',
+      'code',
+      'archive',
+      'other',
+    ] as const
+    expect(kinds.map(getKindLabel)).toEqual([
+      'Folder',
+      'Image',
+      'Video',
+      'Audio',
+      'PDF document',
+      'Spreadsheet',
+      'Document',
+      'Code',
+      'Archive',
+      'File',
+    ])
   })
 })
 

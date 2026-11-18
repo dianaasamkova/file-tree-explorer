@@ -2,6 +2,7 @@ import { createEvent, fireEvent, screen, waitFor, within } from '@testing-librar
 import { findItem, getActiveItem, getDetails, getItem, queryItem, renderExplorer } from '../../testing'
 import { ApiError } from '../../api/contract'
 import { createMockApi } from '../../server/mock-server'
+import { setTracker, type ProductEvent } from '../../analytics/events'
 
 async function renderLoaded(api = createMockApi()) {
   const app = renderExplorer({ api })
@@ -281,3 +282,57 @@ describe('drag and drop', () => {
     expect(fireEvent.dragOver(getItem('Drafts'), { dataTransfer: dataTransfer() })).toBe(true)
   })
 })
+
+describe('product events', () => {
+  const recordEvents = () => {
+    const events: ProductEvent[] = []
+    const restore = setTracker((event) => events.push(event))
+    return { events, restore }
+  }
+
+  it('records each way of moving, the undo, and moves the UI refused', async () => {
+    const { events, restore } = recordEvents()
+    const { user } = await renderLoaded()
+
+    // Drag
+    fireEvent.dragStart(getItem('Welcome.md'), { dataTransfer: dataTransferStub() })
+    fireEvent.dragOver(getItem('Drafts'), { dataTransfer: dataTransferStub() })
+    fireEvent.drop(getItem('Drafts'), { dataTransfer: dataTransferStub() })
+    await screen.findByText('Moved “Welcome.md” to Drafts')
+    // Undo from the toast
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+    await screen.findByText('Moved “Welcome.md” back to Drive')
+    // Keyboard, refused: a folder into its own subfolder
+    screen.getByRole('tree').focus()
+    await user.keyboard('{Home}{ArrowDown}{Control>}x{/Control}{ArrowRight}{ArrowDown}{Control>}v{/Control}')
+    // Picker
+    await user.click(getItem('Team'))
+    await user.selectOptions(getDetails().getByRole('combobox', { name: 'Move to' }), 'drafts')
+    await user.click(getDetails().getByRole('button', { name: 'Move' }))
+    await screen.findByText('Moved “Team” to Drafts')
+
+    await waitFor(() => expect(events).toHaveLength(4))
+    expect(events).toEqual([
+      { name: 'item_moved', method: 'drag' },
+      { name: 'item_moved', method: 'undo' },
+      { name: 'move_refused', method: 'keyboard', reason: 'into-descendant' },
+      { name: 'item_moved', method: 'picker' },
+    ])
+    restore()
+  })
+
+  it('records moves the server refused, with the status', async () => {
+    const { events, restore } = recordEvents()
+    const { user } = await renderLoaded()
+    await user.click(getItem('Team'))
+    await user.selectOptions(getDetails().getByRole('combobox', { name: 'Move to' }), 'archive-read-only')
+    await user.click(getDetails().getByRole('button', { name: 'Move' }))
+
+    await waitFor(() => expect(events).toEqual([{ name: 'move_failed', method: 'picker', status: 403 }]))
+    restore()
+  })
+})
+
+function dataTransferStub() {
+  return { setData: vi.fn(), getData: vi.fn(), effectAllowed: 'all', dropEffect: 'none' }
+}

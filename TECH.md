@@ -66,6 +66,8 @@ To render, `getVisibleRows` walks the tree once into a flat list of the rows on 
 
 ## 3. Key decisions
 
+The main decisions each have a record with the options considered and the evidence: [docs/adr](docs/adr/README.md). The table is the summary.
+
 | Decision                                                              | Why                                                                                                                                                                                                                        | Trade-off                                                                                                                                                               |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Monorepo with npm workspaces and Turborepo                            | Shows the boundaries a product team needs: a design system several features share, a feature that doesn't know which app hosts it. Turborepo caches typecheck, test and build per package.                                 | More configuration than one package; packages ship source, so they can only be consumed by a bundler.                                                                   |
@@ -91,33 +93,53 @@ To render, `getVisibleRows` walks the tree once into a flat list of the rows on 
 - **Visuals:** text contrast is at least 4.5:1 and icons and focus rings at least 3:1 in both themes; focus is always visible; rows are 32 px high and the chevron's target is 24 px; motion is limited to small transitions and turned off with `prefers-reduced-motion`.
 - **Checked by** axe in Playwright (WCAG 2.0, 2.1 and 2.2 A and AA rules) in light and dark mode, plus manual keyboard testing.
 
-## 5. Testing strategy
+## 5. Product
 
-| Layer      | Tool                                  | What                                                                                                                                                                                                                                              | Count |
-| ---------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| Unit       | Vitest                                | Normalizing, sorting, move rules, search, row flattening, formatting, the dataset generator, the mock server, the reducer                                                                                                                         | 108   |
-| Component  | Vitest + Testing Library + user-event | The whole app against the in-memory server with no latency: keyboard, typeahead, search, details, Move to, cut and paste, drag and drop with a `dataTransfer` mock, optimistic rollback with a controlled promise, Undo, URL, theme, drive switch | 52    |
-| End to end | Playwright                            | Production build in Chromium: keyboard-only flow from the skip link, real drag and drop with rollback, scrolling 10,000 items, auto-scroll while dragging, axe in both themes                                                                     | 6     |
+**Who it's for:** people who keep their work in a shared drive and need to find a file, tidy a folder, or see what a folder holds.
 
-Each package sets its own coverage thresholds, and CI fails below them: 100% for the data logic (`model/` and `state/`) and 95% elsewhere. Today every package is at 100%. Only test files are excluded. Getting there removed code rather than adding contrived tests: guards for states that can't happen were designed out (the loaded explorer is a separate component that always has a tree), and the remaining gaps were real behavior: an empty drive, a failed background refresh, a retry, Alt shortcuts, the ⌘ label on a Mac. Component tests use the real sample drive, so they read like the product ("drag Welcome.md onto Drafts") rather than like fixtures. jsdom has no layout, so the setup file gives elements a size and mocks `ResizeObserver` for TanStack Virtual.
+**What success means**, measured as outcomes rather than features. Each question has an event (`analytics/events.ts`, typed, so a call can't misspell an event or forget a field):
 
-## 6. Bundle size
+| Question                                  | Measure                                                | Event                                                         |
+| ----------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
+| Do people find what they search for?      | Share of settled searches with no matches              | `search_settled` (`matches`, `queryLength`)                   |
+| Which ways of moving do people use?       | Moves by method: drag, keyboard, picker                | `item_moved` (`method`)                                       |
+| Do people drop things in the wrong place? | Moves undone right away; moves the UI refused, by rule | `item_moved` with `method: 'undo'`, `move_refused` (`reason`) |
+| Does the backend refuse moves?            | Failed moves per 100, by status                        | `move_failed` (`status`)                                      |
+
+**Guardrails:** events carry no file names, paths or search text, only counts and categories. By default they are logged in development and dropped elsewhere; `setTracker` connects a real analytics service. Performance budgets and the accessibility checks are part of "done" for every change.
+
+## 6. Testing strategy
+
+| Layer          | Tool                                  | What                                                                                                                                                                                                                                                                                 | Count                                       |
+| -------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| Unit           | Vitest                                | Normalizing, sorting, move rules, search, row flattening, formatting, the dataset generator, the mock server, the reducer                                                                                                                                                            | 119                                         |
+| Component      | Vitest + Testing Library + user-event | The whole app against the in-memory server with no latency: keyboard, typeahead, search, details, Move to, cut and paste, drag and drop with a `dataTransfer` mock, optimistic rollback with a controlled promise, Undo, URL, theme, drive switch                                    | 56                                          |
+| End to end     | Playwright                            | Production build in Chromium: keyboard-only flow from the skip link, real drag and drop with rollback, scrolling 10,000 items, auto-scroll while dragging, axe in both themes                                                                                                        | 6                                           |
+| Property-based | fast-check                            | Random drives and random sequences of moves against rules that must always hold: nothing lost or duplicated, consistent parent links, no cycles, sorted children, `canMove` predicting every move, a move and its reverse giving an equal tree, search showing every match's folders | 5 properties, hundreds of random cases each |
+| Mutation       | Stryker                               | Small deliberate changes to `model/` and `state/`; a test must fail for each. Weekly in CI; fails below 90%                                                                                                                                                                          | Score 97.8%                                 |
+
+Each package sets its own coverage thresholds, and CI fails below them: 100% for the data logic (`model/` and `state/`) and 95% elsewhere. Today every package is at 100%. Only test files are excluded. Getting there removed code rather than adding contrived tests: guards for states that can't happen were designed out (the loaded explorer is a separate component that always has a tree), and the remaining gaps were real behavior: an empty drive, a failed background refresh, a retry, Alt shortcuts, the ⌘ label on a Mac. **Beyond coverage.** Coverage only says a line ran. Mutation testing checks that a test would notice if the line were wrong: the score is 97.8% (436 of 446 mutants caught). Its first run found real gaps, now tested (file-kind labels no test checked, a MIME type without a slash), and a defensive branch that could never run, now removed. The 10 surviving mutants are equivalent, meaning they can't change behaviour: a `break` that only saves time, `< 10` against `<= 10` where both give the same text, a value overwritten on the next line. The property-based tests were checked the same way: with a deliberately broken sorted insert, two properties fail and shrink the input to a three-node tree.
+
+Component tests use the real sample drive, so they read like the product ("drag Welcome.md onto Drafts") rather than like fixtures. jsdom has no layout, so the setup file gives elements a size and mocks `ResizeObserver` for TanStack Virtual.
+
+## 7. Bundle size
 
 Production build, JavaScript, gzipped. The 2024 numbers are from the last Create React App build.
 
 |                         |                        2024: CRA + MUI |                                                     2026: Vite + Tailwind |
 | ----------------------- | -------------------------------------: | ------------------------------------------------------------------------: |
-| Total JS                |                 **88 KB** (271 KB raw) |                                                   **123 KB** (395 KB raw) |
+| Total JS                |                 **88 KB** (271 KB raw) |                                                   **132 KB** (423 KB raw) |
 | UI library              | ~45 KB (MUI, Emotion, MUI X Tree View) | ~22 KB (sonner 9.4, tailwind-merge 8.6, lucide icons 3.2, cva + clsx 0.6) |
 | Tree                    |                           inside MUI X |                                                                  own code |
 | React                   |       React 18 + app: the other ~43 KB |                                               React 19 (react-dom): 68 KB |
 | Data and virtualization |                                      — |                                TanStack Query 10.6, TanStack Virtual 10.1 |
-| App code                |                 inside the 43 KB above |                                                                   13.3 KB |
+| Data validation         |                                      — |                                                           zod/mini 6.8 KB |
+| App code                |                 inside the 43 KB above |                   16.2 KB (now with the design system page and analytics) |
 | CSS                     |                    Emotion, at runtime |                                                            5.8 KB, static |
 
-To be honest about it: the bundle grew by 35 KB. The UI layer halved (45 → 22 KB) even though the app does far more, but React 19's react-dom alone is 68 KB, and caching, optimistic updates and virtualization add 21 KB of real features. The cheapest further cuts would be dropping `tailwind-merge` (8.6 KB) for plain `clsx`, and lazy-loading the toast library.
+To be honest about it: the bundle grew by 44 KB. The UI layer halved (45 → 22 KB) even though the app does far more, but React 19's react-dom alone is 68 KB, caching, optimistic updates and virtualization add 21 KB of real features, and validating server data adds 6.8 KB (`zod/mini`; the full `zod` build would have added 26 KB, measured and rejected). The cheapest further cuts would be dropping `tailwind-merge` (8.6 KB) for plain `clsx`, and lazy-loading the toast library.
 
-## 7. Looking back
+## 8. Looking back
 
 What the 2024 version taught me, and what changed:
 
@@ -126,12 +148,14 @@ What the 2024 version taught me, and what changed:
 - **Clearing a search left everything expanded.** Search expansion is now separate state, dropped on clear.
 - **A 1000 ms debounce felt slow.** `useDeferredValue` removes the fixed delay.
 - **MUI X rendered every node.** A flat row model plus virtualization keeps the DOM at about 30 rows for any size.
-- **What I'd still change:** drag and drop has no touch support (the picker covers it), the URL doesn't keep expanded folders, and two fast moves where the first fails rely on the refetch to settle.
+- **What I'd still change:** drag and drop has no touch support (the picker covers it), the URL doesn't keep expanded folders, and the whole drive still arrives in one response (the plan for that is in [ADR 0009](docs/adr/0009-scaling-to-a-million-items.md)).
 
-## 8. Roadmap
+## 9. Roadmap
 
-1. **Lazy loading per folder** with `useInfiniteQuery`, so a drive doesn't have to arrive in one response; search moves to the server.
-2. **Multi-select** (Shift and Ctrl click, Shift+arrows) and moving several items at once.
-3. **Rename, create and delete**, with the same optimistic pattern and Undo.
-4. **Touch drag and drop** through pointer events, keeping native DnD for desktop.
-5. **Move the read-only rule into the client's knowledge** once the API exposes permissions, so invalid drops are refused before they're tried.
+The plan is in [docs/specs/v2-scale-and-performance.md](docs/specs/v2-scale-and-performance.md); done so far: the monorepo with the design system (P0) and the quality work in this document (P1). Next:
+
+1. **Performance (P2):** a visible performance panel, budgets checked in CI with the CPU slowed 6×, the measured fixes (a move that costs the same at any drive size, rows rebuilt only when needed), a filterable "Move to" list, and clearer drag and drop.
+2. **Scale (P3):** a 1,000,000-item drive with folders loaded page by page and search running on the server, in a Web Worker for the demo ([ADR 0009](docs/adr/0009-scaling-to-a-million-items.md)).
+3. **Product (P4, P5):** a sortable list view, filters, cancel and undo everywhere, and a storage treemap.
+4. **Platform (P6):** the explorer loaded into a host app as a separately deployed module, with a fallback when it fails to load.
+5. **Later:** multi-select, live updates from another tab, rename and Trash, touch drag and drop.
