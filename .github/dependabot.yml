@@ -1,14 +1,19 @@
 version: 2
 updates:
-  # One grouped pull request a week for npm dependencies, so updates don't arrive one by one.
+  # One grouped pull request a week for minor and patch updates. Major updates come as separate
+  # pull requests, so one breaking change can't block the safe ones.
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
     groups:
       dependencies:
-        patterns: ['*']
-    open-pull-requests-limit: 3
+        update-types: [minor, patch]
+    ignore:
+      # typescript-eslint supports TypeScript below 6.1; skip TypeScript 7 until it does.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+    open-pull-requests-limit: 5
 
   - package-ecosystem: github-actions
     directory: /

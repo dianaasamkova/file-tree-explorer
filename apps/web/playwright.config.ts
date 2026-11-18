@@ -12,7 +12,17 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Optional: run with a Chromium that is already installed instead of Playwright's own,
+        // e.g. PLAYWRIGHT_CHROMIUM_PATH=/path/to/chromium npm run test:e2e
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
+    },
+  ],
   // Tests run against the production build, as users get it.
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
